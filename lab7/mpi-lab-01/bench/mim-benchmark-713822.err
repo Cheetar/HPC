@@ -1,0 +1,6 @@
+srun: error: nid00616: task 1: Segmentation fault
+srun: Terminating job step 713822.0
+slurmstepd: error: *** STEP 713822.0 ON nid00616 CANCELLED AT 2021-05-27T15:11:06 ***
+srun: error: nid00851: tasks 24-47: Terminated
+srun: error: nid00616: tasks 0,2-23: Terminated
+srun: Force Terminated job step 713822.0
