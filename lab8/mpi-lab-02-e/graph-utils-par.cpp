@@ -38,7 +38,7 @@ Graph* createAndDistributeGraph(int numVertices, int numProcesses, int myRank) {
     int rowsPerProcess = graph->numVertices / numProcesses;
 
     for (int i = myRank * rowsPerProcess; i < (myRank + 1) * rowsPerProcess; ++i) {
-        initializeGraphRow(graph->data[i], i, graph->numVertices);
+        initializeGraphRow(graph->data[i], i - (myRank * rowsPerProcess), graph->numVertices);
     }
 
     return graph;
@@ -54,11 +54,13 @@ void collectAndPrintGraph(Graph* graph, int numProcesses, int myRank) {
     assert(graph->numVertices % numProcesses == 0);
     int rowsPerProcess = graph->numVertices / numProcesses;
 
+    int *buf = new int[graph->numVertices];
+
     /* FIXME: implement */
     if (myRank == 0) {
         for (int processNum=1; processNum < numProcesses; processNum++) {
             for (int j=0; j < rowsPerProcess; j++) {
-                MPI_Recv(*graph->data[processNum * rowsPerProcess + j],
+                MPI_Recv(buf,
                          graph->numVertices,  // Data length
                          MPI_INT,
                          processNum,  // Rank of sending process
@@ -66,11 +68,12 @@ void collectAndPrintGraph(Graph* graph, int numProcesses, int myRank) {
                          MPI_COMM_WORLD,
                          status);
                 }
+
+                printGraphRow(buf, 0, graph->numVertices);
         }
     } else {
         for (int j=0; j < rowsPerProcess; j++) {
-            //MPI_Send(*graph->data[myRank * rowsPerProcess + j],
-            MPI_Send(*graph->data[j],
+            MPI_Send(graph->data[j],
                      graph->numVertices,  // Data length
                      MPI_INT,
                      0,  // Rank of root process
