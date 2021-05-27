@@ -1,0 +1,20 @@
+2021-05-03 22:05:47,215 : dir: ms394734
+2021-05-03 22:05:47,852 : dir: ms394734 params: ./brandes ../tests/gen1.txt res-gen1.txt
+2021-05-03 22:05:47,852 : subprocess finished
+2021-05-03 22:05:47,857 : dir: ms394734 params: ./brandes ../tests/gen2.txt res-gen2.txt
+2021-05-03 22:05:47,857 : subprocess finished
+2021-05-03 22:05:47,858 : dir: ms394734 params: ./brandes ../tests/gen3.txt res-gen3.txt
+2021-05-03 22:05:47,858 : subprocess finished
+2021-05-03 22:05:47,858 : dir: ms394734 params: ./brandes ../tests/gen4.txt res-gen4.txt
+2021-05-03 22:05:47,858 : subprocess finished
+2021-05-03 22:05:47,859 : dir: ms394734 params: ./brandes ../tests/gen5.txt res-gen5.txt
+2021-05-03 22:05:47,859 : subprocess finished
+2021-05-03 22:05:47,859 : dir: ms394734 params: ./brandes ../tests/gen6.txt res-gen6.txt
+2021-05-03 22:05:47,860 : subprocess finished
+2021-05-03 22:05:47,860 : dir: ms394734 params: ./brandes ../tests/gen7.txt res-gen7.txt
+2021-05-03 22:05:47,860 : subprocess finished
+2021-05-03 22:05:47,861 : dir: ms394734 params: ./brandes ../tests/gen8.txt res-gen8.txt
+2021-05-03 22:05:47,861 : subprocess finished
+2021-05-03 22:05:47,861 : dir: ms394734 params: ./brandes ../tests/gen9.txt res-gen9.txt
+2021-05-03 22:05:47,861 : subprocess finished
+2021-05-03 22:05:48,279 : subdir ms394734 errors 0

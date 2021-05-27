@@ -1,0 +1,20 @@
+2021-05-03 22:28:55,997 : dir: entropy
+2021-05-03 22:28:56,651 : dir: entropy params: ./brandes ../tests/gen1.txt res-gen1.txt
+2021-05-03 22:28:56,652 : subprocess finished
+2021-05-03 22:28:56,652 : dir: entropy params: ./brandes ../tests/gen2.txt res-gen2.txt
+2021-05-03 22:28:56,652 : subprocess finished
+2021-05-03 22:28:56,652 : dir: entropy params: ./brandes ../tests/gen3.txt res-gen3.txt
+2021-05-03 22:28:56,652 : subprocess finished
+2021-05-03 22:28:56,653 : dir: entropy params: ./brandes ../tests/gen4.txt res-gen4.txt
+2021-05-03 22:28:56,653 : subprocess finished
+2021-05-03 22:28:56,653 : dir: entropy params: ./brandes ../tests/gen5.txt res-gen5.txt
+2021-05-03 22:28:56,653 : subprocess finished
+2021-05-03 22:28:56,653 : dir: entropy params: ./brandes ../tests/gen6.txt res-gen6.txt
+2021-05-03 22:28:56,653 : subprocess finished
+2021-05-03 22:28:56,653 : dir: entropy params: ./brandes ../tests/gen7.txt res-gen7.txt
+2021-05-03 22:28:56,653 : subprocess finished
+2021-05-03 22:28:56,654 : dir: entropy params: ./brandes ../tests/gen8.txt res-gen8.txt
+2021-05-03 22:28:56,654 : subprocess finished
+2021-05-03 22:28:56,654 : dir: entropy params: ./brandes ../tests/gen9.txt res-gen9.txt
+2021-05-03 22:28:56,654 : subprocess finished
+2021-05-03 22:28:57,046 : subdir entropy errors 0
