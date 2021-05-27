@@ -38,7 +38,7 @@ Graph* createAndDistributeGraph(int numVertices, int numProcesses, int myRank) {
     int rowsPerProcess = graph->numVertices / numProcesses;
 
     for (int i = myRank * rowsPerProcess; i < (myRank + 1) * rowsPerProcess; ++i) {
-        initializeGraphRow(graph->data[i], i - (myRank * rowsPerProcess), graph->numVertices);
+        initializeGraphRow(graph->data[i- (myRank * rowsPerProcess)], i, graph->numVertices);
     }
 
     return graph;
