@@ -50,8 +50,6 @@ void collectAndPrintGraph(Graph* graph, int numProcesses, int myRank) {
     assert(graph->firstRowIdxIncl >= 0 && graph->lastRowIdxExcl <= graph->numVertices);
 
     MPI_Status *status;
-    //MPI_Comm_size(MPI_COMM_WORLD, &numProcesses);
-    //MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
 
     assert(graph->numVertices % numProcesses == 0);
     int rowsPerProcess = graph->numVertices / numProcesses;
@@ -60,7 +58,7 @@ void collectAndPrintGraph(Graph* graph, int numProcesses, int myRank) {
     if (myRank == 0) {
         for (int processNum=1; processNum < numProcesses; processNum++) {
             for (int j=0; j < rowsPerProcess; j++) {
-                MPI_Recv(graph->data[processNum * rowsPerProcess + j],
+                MPI_Recv(*graph->data[processNum * rowsPerProcess + j],
                          graph->numVertices,  // Data length
                          MPI_INT,
                          processNum,  // Rank of sending process
@@ -71,7 +69,8 @@ void collectAndPrintGraph(Graph* graph, int numProcesses, int myRank) {
         }
     } else {
         for (int j=0; j < rowsPerProcess; j++) {
-            MPI_Send(graph->data[myRank * rowsPerProcess + j],
+            //MPI_Send(*graph->data[myRank * rowsPerProcess + j],
+            MPI_Send(*graph->data[j],
                      graph->numVertices,  // Data length
                      MPI_INT,
                      0,  // Rank of root process
