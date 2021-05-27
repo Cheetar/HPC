@@ -11,7 +11,10 @@
 
 int getFirstGraphRowOfProcess(int numVertices, int numProcesses, int myRank) {
     /* FIXME: implement */
-    return myRank;
+    assert(numVertices % numProcesses == 0);
+    int rowsPerProcess = numVertices / numProcesses;
+
+    return myRank * rowsPerProcess;
 }
 
 Graph* createAndDistributeGraph(int numVertices, int numProcesses, int myRank) {
@@ -31,6 +34,12 @@ Graph* createAndDistributeGraph(int numVertices, int numProcesses, int myRank) {
     assert(graph->firstRowIdxIncl >= 0 && graph->lastRowIdxExcl <= graph->numVertices);
 
     /* FIXME: implement */
+    assert(graph->numVertices % numProcesses == 0);
+    int rowsPerProcess = graph->numVertices / numProcesses;
+
+    for (int i = myRank * rowsPerProcess; i < (myRank + 1) * rowsPerProcess; ++i) {
+        initializeGraphRow(graph->data[i], i, graph->numVertices);
+    }
 
     return graph;
 }
@@ -40,7 +49,37 @@ void collectAndPrintGraph(Graph* graph, int numProcesses, int myRank) {
     assert(graph->numVertices > 0);
     assert(graph->firstRowIdxIncl >= 0 && graph->lastRowIdxExcl <= graph->numVertices);
 
+    MPI_Status *status;
+    MPI_Comm_size(MPI_COMM_WORLD, &numProcesses);
+    MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
+
+    assert(graph->numVertices % numProcesses == 0);
+    int rowsPerProcess = graph->numVertices / numProcesses;
+
     /* FIXME: implement */
+    if (myRank == 0) {
+        for (int processNum=1; processNum < numProcesses; processNum++) {
+            for (int j=0; j < rowsPerProcess; j++) {
+                MPI_Recv(graph->data[processNum * rowsPerProcess + j],
+                         graph->numVertices,  // Data length
+                         MPI_INT,
+                         processNum,  // Rank of sending process
+                         13,
+                         MPI_COMM_WORLD,
+                         status);
+                }
+        }
+    } else {
+        for (int j=0; j < rowsPerProcess; j++) {
+            MPI_Send(graph->data[myRank * rowsPerProcess + j],
+                     graph->numVertices,  // Data length
+                     MPI_INT,
+                     0,  // Rank of root process
+                     13,
+                     MPI_COMM_WORLD,
+                     status);
+        }
+    }
 }
 
 void destroyGraph(Graph* graph, int numProcesses, int myRank) {
