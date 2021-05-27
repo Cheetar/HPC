@@ -1,0 +1,645 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<head>
+<title>HPC - MPI - introduction &amp; point-to-point communication</title>
+<!-- 2021-04-16 Fri 17:09 -->
+<meta  http-equiv="Content-Type" content="text/html;charset=utf-8" />
+<meta  name="generator" content="Org-mode" />
+<meta  name="author" content="Krzysztof Rządca" />
+<style type="text/css">
+ <!--/*--><![CDATA[/*><!--*/
+  .title  { text-align: center; }
+  .todo   { font-family: monospace; color: red; }
+  .done   { color: green; }
+  .tag    { background-color: #eee; font-family: monospace;
+            padding: 2px; font-size: 80%; font-weight: normal; }
+  .timestamp { color: #bebebe; }
+  .timestamp-kwd { color: #5f9ea0; }
+  .right  { margin-left: auto; margin-right: 0px;  text-align: right; }
+  .left   { margin-left: 0px;  margin-right: auto; text-align: left; }
+  .center { margin-left: auto; margin-right: auto; text-align: center; }
+  .underline { text-decoration: underline; }
+  #postamble p, #preamble p { font-size: 90%; margin: .2em; }
+  p.verse { margin-left: 3%; }
+  pre {
+    border: 1px solid #ccc;
+    box-shadow: 3px 3px 3px #eee;
+    padding: 8pt;
+    font-family: monospace;
+    overflow: auto;
+    margin: 1.2em;
+  }
+  pre.src {
+    position: relative;
+    overflow: visible;
+    padding-top: 1.2em;
+  }
+  pre.src:before {
+    display: none;
+    position: absolute;
+    background-color: white;
+    top: -10px;
+    right: 10px;
+    padding: 3px;
+    border: 1px solid black;
+  }
+  pre.src:hover:before { display: inline;}
+  pre.src-sh:before    { content: 'sh'; }
+  pre.src-bash:before  { content: 'sh'; }
+  pre.src-emacs-lisp:before { content: 'Emacs Lisp'; }
+  pre.src-R:before     { content: 'R'; }
+  pre.src-perl:before  { content: 'Perl'; }
+  pre.src-java:before  { content: 'Java'; }
+  pre.src-sql:before   { content: 'SQL'; }
+
+  table { border-collapse:collapse; }
+  caption.t-above { caption-side: top; }
+  caption.t-bottom { caption-side: bottom; }
+  td, th { vertical-align:top;  }
+  th.right  { text-align: center;  }
+  th.left   { text-align: center;   }
+  th.center { text-align: center; }
+  td.right  { text-align: right;  }
+  td.left   { text-align: left;   }
+  td.center { text-align: center; }
+  dt { font-weight: bold; }
+  .footpara:nth-child(2) { display: inline; }
+  .footpara { display: block; }
+  .footdef  { margin-bottom: 1em; }
+  .figure { padding: 1em; }
+  .figure p { text-align: center; }
+  .inlinetask {
+    padding: 10px;
+    border: 2px solid gray;
+    margin: 10px;
+    background: #ffffcc;
+  }
+  #org-div-home-and-up
+   { text-align: right; font-size: 70%; white-space: nowrap; }
+  textarea { overflow-x: auto; }
+  .linenr { font-size: smaller }
+  .code-highlighted { background-color: #ffff00; }
+  .org-info-js_info-navigation { border-style: none; }
+  #org-info-js_console-label
+    { font-size: 10px; font-weight: bold; white-space: nowrap; }
+  .org-info-js_search-highlight
+    { background-color: #ffff00; color: #000000; font-weight: bold; }
+  /*]]>*/-->
+</style>
+<link href="cpp-theme.css" rel="stylesheet">
+<script type="text/javascript">
+/*
+@licstart  The following is the entire license notice for the
+JavaScript code in this tag.
+
+Copyright (C) 2012-2013 Free Software Foundation, Inc.
+
+The JavaScript code in this tag is free software: you can
+redistribute it and/or modify it under the terms of the GNU
+General Public License (GNU GPL) as published by the Free Software
+Foundation, either version 3 of the License, or (at your option)
+any later version.  The code is distributed WITHOUT ANY WARRANTY;
+without even the implied warranty of MERCHANTABILITY or FITNESS
+FOR A PARTICULAR PURPOSE.  See the GNU GPL for more details.
+
+As additional permission under GNU GPL version 3 section 7, you
+may distribute non-source (e.g., minimized or compacted) forms of
+that code without the copy of the GNU GPL normally required by
+section 4, provided you include this license notice and a URL
+through which recipients can access the Corresponding Source.
+
+
+@licend  The above is the entire license notice
+for the JavaScript code in this tag.
+*/
+<!--/*--><![CDATA[/*><!--*/
+ function CodeHighlightOn(elem, id)
+ {
+   var target = document.getElementById(id);
+   if(null != target) {
+     elem.cacheClassElem = elem.className;
+     elem.cacheClassTarget = target.className;
+     target.className = "code-highlighted";
+     elem.className   = "code-highlighted";
+   }
+ }
+ function CodeHighlightOff(elem, id)
+ {
+   var target = document.getElementById(id);
+   if(elem.cacheClassElem)
+     elem.className = elem.cacheClassElem;
+   if(elem.cacheClassTarget)
+     target.className = elem.cacheClassTarget;
+ }
+/*]]>*///-->
+</script>
+
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.4/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+<script type="text/javascript">
+<!--/*--><![CDATA[/*><!--*/
+    MathJax.Hub.Config({
+        jax: ["input/TeX", "output/HTML-CSS"],
+        extensions: ["tex2jax.js","TeX/AMSmath.js","TeX/AMSsymbols.js",
+                     "TeX/noUndefined.js", "[Contrib]/siunitx/siunitx.js", "[Contrib]/mhchem/mhchem.js"],
+        tex2jax: {
+            inlineMath: [ ["\\(","\\)"] ],
+            displayMath: [ ['$$','$$'], ["\\[","\\]"], ["\\begin{displaymath}","\\end{displaymath}"] ],
+            skipTags: ["script","noscript","style","textarea","pre","code"],
+            ignoreClass: "tex2jax_ignore",
+            processEscapes: false,
+            processEnvironments: true,
+            preview: "TeX"
+        },
+        TeX: {extensions: ["AMSmath.js","AMSsymbols.js",  "[Contrib]/siunitx/siunitx.js", "[Contrib]/mhchem/mhchem.js"]},
+        showProcessingMessages: true,
+        displayAlign: "center",
+        displayIndent: "2em",
+
+        "HTML-CSS": {
+             scale: 100,
+             availableFonts: ["STIX","TeX"],
+             preferredFont: "TeX",
+             webFont: "TeX",
+             imageFont: "TeX",
+             showMathMenu: true,
+        },
+        MMLorHTML: {
+             prefer: {
+                 MSIE:    "MML",
+                 Firefox: "MML",
+                 Opera:   "HTML",
+                 other:   "HTML"
+             }
+        }
+    });
+/*]]>*///-->
+</script>
+</head>
+<body>
+<div id="content">
+<h1 class="title">HPC - MPI - introduction &amp; point-to-point communication</h1>
+<div id="table-of-contents">
+<h2>Table of Contents</h2>
+<div id="text-table-of-contents">
+<ul>
+<li><a href="#sec-1">1. Introduction</a></li>
+<li><a href="#sec-2">2. Program structure</a></li>
+<li><a href="#sec-3">3. Compiling and running</a></li>
+<li><a href="#sec-4">4. Communicators</a></li>
+<li><a href="#sec-5">5. Point to point communication</a></li>
+<li><a href="#sec-6">6. Exercises</a></li>
+<li><a href="#sec-7">7. Bibliography</a></li>
+</ul>
+</div>
+</div>
+
+<div id="outline-container-sec-1" class="outline-2">
+<h2 id="sec-1"><span class="section-number-2">1</span> Introduction</h2>
+<div class="outline-text-2" id="text-1">
+<p>
+MPI is an API for distributed programming based on exchange of messages. 
+The first version of the standard was proposed in 1993. MPI is updated every few years to cover new use-cases and new architectures. It is used extensively in High Performance Computing.
+</p>
+
+<p>
+MPI programs are executed as multiple processes (usually running on different machines). MPI standard defines functions for communication between these processes. An MPI implementation (such as MPICH) implements these library functions and also provides tools to compile and launch MPI programs conveniently.
+</p>
+
+<p>
+Files for today: <a href="mpi-lab-01.zip">mpi-lab-01.zip</a>
+</p>
+
+<p>
+Google Colab Notebook: <a href="https://colab.research.google.com/drive/1AP4iHbibi_Pa7nJkHVo1WLzJmdBgPVI-?usp=sharing">draw-bandwidth.ipynb</a>
+</p>
+</div>
+</div>
+
+<div id="outline-container-sec-2" class="outline-2">
+<h2 id="sec-2"><span class="section-number-2">2</span> Program structure</h2>
+<div class="outline-text-2" id="text-2">
+<div class="org-src-container">
+
+<pre class="src src-c"><span class="org-preprocessor">#include</span> <span class="org-string">&lt;mpi.h&gt;</span><br>
+<br>
+<span class="org-type">int</span> <span class="org-function-name">main</span>(<span class="org-type">int</span> <span class="org-variable-name">argc</span>, <span class="org-type">char</span> *<span class="org-variable-name">argv</span>[]) {<br>
+<br>
+&nbsp;&nbsp; MPI_Init(&amp;argc,&amp;argv); <span class="org-comment-delimiter">/* </span><span class="org-comment">intialize the library with parameters caught by the runtime </span><span class="org-comment-delimiter">*/</span><br>
+<br>
+&nbsp;&nbsp; <span class="org-comment-delimiter">/* </span><span class="org-comment">parse program arguments </span><span class="org-comment-delimiter">*/</span><br>
+&nbsp;&nbsp; <span class="org-comment-delimiter">/* </span><span class="org-comment">do something: </span><span class="org-comment-delimiter">*/</span><br>
+&nbsp;&nbsp; <span class="org-comment-delimiter">/* </span><span class="org-comment">MPI communication goes here </span><span class="org-comment-delimiter">*/</span><br>
+<br>
+&nbsp;&nbsp; MPI_Finalize(); <span class="org-comment-delimiter">/* </span><span class="org-comment">mark that we've finished communicating </span><span class="org-comment-delimiter">*/</span><br>
+<br>
+&nbsp;&nbsp; <span class="org-keyword">return</span> 0;<br>
+}<br>
+</p>
+</pre>
+</div>
+
+<p>
+<code>MPI_Finalize()</code> cleans up MPI state, so it must be run on all execution paths.
+</p>
+
+<ul class="org-ul">
+<li>extend <code>hello-world-seq.c</code> with these functions and try to compile
+it on one of lab machines <code>red*</code> or <code>yellow*</code>.
+Warning: the MPI version at <code>students.mimuw.edu.pl</code> is incompatible with the version the lab machines have. Thus, you need to compile and run directly on one of the lab machines.
+</li>
+</ul>
+</div>
+</div>
+
+
+<div id="outline-container-sec-3" class="outline-2">
+<h2 id="sec-3"><span class="section-number-2">3</span> Compiling and running</h2>
+<div class="outline-text-2" id="text-3">
+</div><div id="outline-container-sec-3-1" class="outline-3">
+<h3 id="sec-3-1"><span class="section-number-3">3.1</span> Distributed, ssh-based environments</h3>
+<div class="outline-text-3" id="text-3-1">
+</div><div id="outline-container-sec-3-1-1" class="outline-4">
+<h4 id="sec-3-1-1"><span class="section-number-4">3.1.1</span> Compilation</h4>
+<div class="outline-text-4" id="text-3-1-1">
+<p>
+An MPI implementation provides its own wrapper for a C compiler. The wrapper is usually called mpicc.
+</p>
+
+<ul class="org-ul">
+<li>change the makefile and compile <code>hello-world-seq.c</code> on one of the lab machines <code>red*</code> or <code>yellow*</code>.
+</li>
+
+<li>homework: install mpich on your machine. There are easy to install packages for most linux distributions and for mac osx. 
+</li>
+</ul>
+</div>
+</div>
+
+<div id="outline-container-sec-3-1-2" class="outline-4">
+<h4 id="sec-3-1-2"><span class="section-number-4">3.1.2</span> Running</h4>
+<div class="outline-text-4" id="text-3-1-2">
+<div class="org-src-container">
+
+<pre class="src src-bash">mpiexec -n &lt;N&gt; &lt;program_path&gt;
+</pre>
+</div>
+
+<p>
+Where <code>&lt;N&gt;</code> is the number of processes to launch. <code>mpiexec</code> will launch all the processes on a single machine. 
+</p>
+
+<p>
+To launch processes on different hosts, you have to be able to login to each of these hosts through ssh from the host where you start the executable. Here, assume that we use <code>yellow01</code> and <code>yellow02</code>:
+</p>
+
+<div class="org-src-container">
+
+<pre class="src src-bash">students$ ssh yellow01
+yellow01$ ssh-copy-id yellow02
+yellow01$ ssh yellow02 # you have to log in manually once every 24h or so
+yellow02$ logout
+yellow01$ ssh yellow02 # now you shouldn't have to type the password
+yellow02$ logout
+</pre>
+</div>
+
+<p>
+Now, your environment is prepared to run MPI via SSH:
+</p>
+
+<div class="org-src-container">
+
+<pre class="src src-bash">yellow01$ mpiexec -n 2 -host yellow01,yellow02 &lt;program_path&gt;
+</pre>
+</div>
+</div>
+</div>
+</div>
+
+
+<div id="outline-container-sec-3-2" class="outline-3">
+<h3 id="sec-3-2"><span class="section-number-3">3.2</span> Compiling and running on a supercomputer</h3>
+<div class="outline-text-3" id="text-3-2">
+<p>
+Warning: remember that a supercomputer is an expensive machine normally used for serious scientific problems. Be reasonable. We will have a reservation of a number of nodes for our labs; we all share machines in this reservation. If you take too many machines for too long, others won't be able to use them (and they'll know who you are!). Be reasonable.
+</p>
+</div>
+
+<div id="outline-container-sec-3-2-1" class="outline-4">
+<h4 id="sec-3-2-1"><span class="section-number-4">3.2.1</span> Accessing the supercomputer</h4>
+<div class="outline-text-4" id="text-3-2-1">
+<p>
+Before first login, setup 2FA following instructions on page: <a href="https://kdm.icm.edu.pl/Tutorials/Logowanie/ssh/">https://kdm.icm.edu.pl/Tutorials/Logowanie/ssh/</a>
+</p>
+
+<div class="org-src-container">
+
+<pre class="src src-bash">ssh username@login.icm.edu.pl
+ssh okeanos
+</pre>
+</div>
+
+<p>
+<code>okeanos1</code> is the head node for our supercomputer (to confuse users, you login to <code>okeanos</code>, but work on <code>okeanos1</code>).
+</p>
+
+<p>
+With emacs, you can use tramp mode to remotely edit files on your local machine. To open a connection to okeanos, use the following filename: <code>/ssh:account@login.icm.edu.pl|ssh:account@okeanos:/</code>.
+</p>
+</div>
+</div>
+
+<div id="outline-container-sec-3-2-2" class="outline-4">
+<h4 id="sec-3-2-2"><span class="section-number-4">3.2.2</span> Compiling</h4>
+<div class="outline-text-4" id="text-3-2-2">
+<p>
+You compile the code on the head node.
+</p>
+
+<p>
+Hint: for development, have a git repository that you clone on the head node, but develop the code somewhere else.
+</p>
+
+<p>
+Okeanos' environment wraps the default C compiler <code>cc</code> to <code>mpicc</code> provided by okeanos' vendor, Cray. The C++ compiler is invoked by <code>CC</code>. To change the actual compiler (from cray to intel, or gnu) use: <code>module swap PrgEnv-cray PrgEnv-intel</code> (or <code>PrgEnv-gnu</code>).
+</p>
+</div>
+</div>
+
+<div id="outline-container-sec-3-2-3" class="outline-4">
+<h4 id="sec-3-2-3"><span class="section-number-4">3.2.3</span> Running</h4>
+<div class="outline-text-4" id="text-3-2-3">
+<p>
+Supercomputers use sophisticated scheduling software to force fair sharing of too little resources among too many users. Okeanos uses Slurm <a href="https://slurm.schedmd.com/">https://slurm.schedmd.com/</a>, a standard, open-source scheduler. Each time you want to use some of the nodes, you submit a <b>job</b> by declaring its runtime, the number of requested nodes and (usually) the command to run. Slurm queues your job. Once your job is at the top of the queue and there are enough free nodes, your job is allocated to concrete nodes, and then Slurm runs the provided executable.
+</p>
+
+<p>
+There are three main usage scenarios. For <b>long running jobs</b>, you
+typically provide a batch script. For <b>semi-interactive work</b>, you ask
+for an allocation and then run your code inside this
+allocation. Finally, for <b>interactive work</b> you submit a job and the
+terminal blocks until your job is executed.
+</p>
+
+
+<p>
+Batch script:
+</p>
+
+<ol class="org-ol">
+<li>Create a file describing your computation:
+
+<p>
+<code>hello-world.batch</code>
+</p>
+<div class="org-src-container">
+
+<pre class="src src-bash">#!/bin/bash -l
+#SBATCH --job-name mim-hello          # this will be shown in the queueing system
+#SBATCH --output "mim-hello-%j.out"   # stdout redirection
+#SBATCH --error "mim-hello-%j.err"    # stderr redirection
+#SBATCH --account "GC80-33"           # the number of our grant
+#SBATCH --nodes 2                     # how many nodes we want
+#SBATCH --tasks-per-node 24           # each node is 2 socket, 12 core, so we want 24 tasks on each node
+#SBATCH --time 00:05:00               # if the job runs longer than this, it'll be killed
+
+srun hello-world-seq.exe              # what command to run
+</pre>
+</div>
+</li>
+
+<li>Submit a job using the description:
+
+<div class="org-src-container">
+
+<pre class="src src-bash">sbatch hello-world.batch
+</pre>
+</div>
+</li>
+
+<li>(optional) Nervously check the state of the cluster (<code>sinfo</code>) and the queue (<code>squeue</code>), maybe filtering your jobs only (<code>squeue -u your_user_id</code>).
+</li>
+
+<li>Once the job is completed, the stdout will be in <code>mim-hello-$jobid.out</code>. 
+</li>
+</ol>
+
+
+<p>
+Allocate &amp; run:
+</p>
+
+<ol class="org-ol">
+<li>Ask for an allocation:
+
+<div class="org-src-container">
+
+<pre class="src src-bash">salloc --nodes 2 --tasks-per-node 24 --account GC80-33 --time 00:05:00 --reservation=mimuw_pt # or mimuw_wt
+</pre>
+</div>
+</li>
+
+<li>Wait until your job starts to execute (it goes through the same scheduler as a batch job).
+</li>
+
+<li>Once <code>salloc</code> returns, it launches a shell subprocess with environment variables that describe the current allocation (e.g.: <code>$SLURM_JOB_NODELIST</code> contains the host names on which your job executes). But you're still on the head node.
+</li>
+
+<li>To launch a program, use <code>srun</code>, try:
+
+<div class="org-src-container">
+
+<pre class="src src-bash">srun hostname
+</pre>
+</div>
+
+<p>
+or:
+</p>
+
+<div class="org-src-container">
+
+<pre class="src src-bash">srun ./hello-world-seq.exe
+</pre>
+</div>
+</li>
+
+<li>Once your job is over, exit the shell subprocess.
+</li>
+</ol>
+
+
+<p>
+Interactive work:
+</p>
+
+<div class="org-src-container">
+
+<pre class="src src-bash">srun --nodes 2 --tasks-per-node 24 --account GC80-33 --time 00:05:00 --reservation=mimuw_pt  hostname # or mimuw_wt
+</pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+
+
+
+<div id="outline-container-sec-4" class="outline-2">
+<h2 id="sec-4"><span class="section-number-2">4</span> Communicators</h2>
+<div class="outline-text-2" id="text-4">
+<p>
+MPI abstracts a group of communicating processes into a <b>communicator</b>. A communicator enables processes to address each other by ranks: integers between 0 and \(n-1\), where \(n\) is the number of processes in a communicator. A communicator also supports collective communication (such as broadcast) - more on this in the next lab. 
+</p>
+
+<p>
+Once MPI is initialized, it creates a default communicator, <code>MPI_COMM_WORLD</code>, grouping all the processes launched with a single <code>mpiexec</code> call. 
+</p>
+
+<p>
+An application can define its own communicators that group a subset of processes ( <a href="http://mpi-forum.org/docs/mpi-3.1/mpi31-report/node156.htm#Node156">http://mpi-forum.org/docs/mpi-3.1/mpi31-report/node156.htm#Node156</a> ).
+</p>
+
+<p>
+The following example shows how to query a communicator for the total number of processes and the rank of the current process.
+</p>
+
+<div class="org-src-container">
+
+<pre class="src src-c"><span class="org-type">int</span> <span class="org-variable-name">numProcesses</span>, <span class="org-variable-name">myRank</span>;<br>
+MPI_Comm_size(MPI_COMM_WORLD, &amp;numProcesses);<br>
+MPI_Comm_rank(MPI_COMM_WORLD, &amp;myRank);<br>
+</p>
+</pre>
+</div>
+
+<ul class="org-ul">
+<li>extend <code>hello-world-seq.c</code> so that each process prints its rank; and process 0 prints the number of processes. 
+</li>
+</ul>
+</div>
+</div>
+
+<div id="outline-container-sec-5" class="outline-2">
+<h2 id="sec-5"><span class="section-number-2">5</span> Point to point communication</h2>
+<div class="outline-text-2" id="text-5">
+<p>
+We start with the default communication mode: blocking receive, potentially blocking send (i.e., it might be a rendez-vous communication, see the slides from the lecture).
+</p>
+
+<div class="org-src-container">
+
+<pre class="src src-c"><span class="org-type">int</span> <span class="org-function-name">MPI_Send</span>(<span class="org-keyword">const</span> <span class="org-type">void</span>* <span class="org-variable-name">buf</span>,&nbsp;&nbsp;<span class="org-comment-delimiter">/* </span><span class="org-comment">pointer to the message </span><span class="org-comment-delimiter">*/</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <span class="org-type">int</span> <span class="org-variable-name">count</span>, <span class="org-comment-delimiter">/* </span><span class="org-comment">number of items in the message </span><span class="org-comment-delimiter">*/</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <span class="org-type">MPI_Datatype</span> <span class="org-variable-name">datatype</span>, <span class="org-comment-delimiter">/* </span><span class="org-comment">type of data in the message </span><span class="org-comment-delimiter">*/</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <span class="org-type">int</span> <span class="org-variable-name">dest</span>, <span class="org-comment-delimiter">/* </span><span class="org-comment">rank of the destination process </span><span class="org-comment-delimiter">*/</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <span class="org-type">int</span> <span class="org-variable-name">tag</span>, <span class="org-comment-delimiter">/* </span><span class="org-comment">app-defined message type </span><span class="org-comment-delimiter">*/</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <span class="org-type">MPI_Comm</span> <span class="org-variable-name">comm</span> <span class="org-comment-delimiter">/* </span><span class="org-comment">communicator to use </span><span class="org-comment-delimiter">*/</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;);<br>
+</p>
+</pre>
+</div>
+
+<p>
+A message is an array consisting of <code>count</code> items of the same type <code>datatype</code>. MPI defines standard datatypes, such as <code>MPI_CHAR</code>, <code>MPI_INT</code>, <code>MPI_LONG</code>, <code>MPI_FLOAT</code>, <code>MPI_DOUBLE</code>, <code>MPI_BYTE</code> (full list: <a href="http://mpi-forum.org/docs/mpi-3.1/mpi31-report/node48.htm">http://mpi-forum.org/docs/mpi-3.1/mpi31-report/node48.htm</a> ). MPI also allows to define derived types <a href="http://mpi-forum.org/docs/mpi-3.1/mpi31-report/node77.htm#Node77">http://mpi-forum.org/docs/mpi-3.1/mpi31-report/node77.htm#Node77</a>. 
+</p>
+
+<div class="org-src-container">
+
+<pre class="src src-c"><span class="org-type">int</span> <span class="org-function-name">MPI_Recv</span>(<span class="org-type">void</span>* <span class="org-variable-name">buf</span>, <span class="org-comment-delimiter">/* </span><span class="org-comment">where the message will be saved </span><span class="org-comment-delimiter">*/</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <span class="org-type">int</span> <span class="org-variable-name">count</span>, <span class="org-comment-delimiter">/* </span><span class="org-comment">max number of elements we expect </span><span class="org-comment-delimiter">*/</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <span class="org-type">MPI_Datatype</span> <span class="org-variable-name">datatype</span>, <span class="org-comment-delimiter">/* </span><span class="org-comment">type of data in the message </span><span class="org-comment-delimiter">*/</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <span class="org-type">int</span> <span class="org-variable-name">source</span>, <span class="org-comment-delimiter">/* </span><span class="org-comment">if not MPI_SOURCE_ANY, receive only from source with the given rank&nbsp;&nbsp;</span><span class="org-comment-delimiter">*/</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <span class="org-type">int</span> <span class="org-variable-name">tag</span>, <span class="org-comment-delimiter">/* </span><span class="org-comment">if not MPI_ANY_TAG, receive only with a certain tag </span><span class="org-comment-delimiter">*/</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <span class="org-type">MPI_Comm</span> <span class="org-variable-name">comm</span>, <span class="org-comment-delimiter">/* </span><span class="org-comment">communicator to use </span><span class="org-comment-delimiter">*/</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <span class="org-type">MPI_Status</span> *<span class="org-variable-name">status</span> <span class="org-comment-delimiter">/* </span><span class="org-comment">if not MPI_STATUS_IGNORE, write comm info here </span><span class="org-comment-delimiter">*/</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;);<br>
+</p>
+</pre>
+</div>
+
+<p>
+You can read communication data from status fields: <code>status.MPI_SOURCE</code>, <code>status.MPI_TAG</code> and <code>status.MPI_ERROR</code>. To read the number of received items use: <code>MPI_Get_Count(const MPI_Status* status, MPI_Datatype datatype, int* count)</code>.
+</p>
+
+<ul class="org-ul">
+<li>extend <code>hello-world-seq.c</code> so that each process of rank \([1, n)\) picks a random integer \(r \in [0,10]\), prints it and then sends a pair \((rank, r)\) to rank 0. Rank 0 prints all the received data.
+</li>
+</ul>
+</div>
+</div>
+
+<div id="outline-container-sec-6" class="outline-2">
+<h2 id="sec-6"><span class="section-number-2">6</span> Exercises</h2>
+<div class="outline-text-2" id="text-6">
+</div><div id="outline-container-sec-6-1" class="outline-3">
+<h3 id="sec-6-1"><span class="section-number-3">6.1</span> Ring</h3>
+<div class="outline-text-3" id="text-6-1">
+<p>
+Organize \(n\) processes into a ring: rank 0 sends to rank \(1\), rank \(1\) sends to rank \(2\), rank \(n-1\) sends to rank \(0\). A message contains a single <code>int64</code> number. First message is \(1\); then each process receives the number, multiplies it by its current rank and sends its to the next rank. Rank 0 prints the received message.
+</p>
+</div>
+</div>
+
+<div id="outline-container-sec-6-2" class="outline-3">
+<h3 id="sec-6-2"><span class="section-number-3">6.2</span> Benchmarking your platform</h3>
+<div class="outline-text-3" id="text-6-2">
+<p>
+Simple benchmarking in MPI:
+</p>
+
+<div class="org-src-container">
+
+<pre class="src src-c"><span class="org-type">double</span> <span class="org-variable-name">startTime</span>;<br>
+<span class="org-type">double</span> <span class="org-variable-name">endTime</span>;<br>
+<span class="org-type">double</span> <span class="org-variable-name">executionTime</span>;<br>
+<br>
+startTime = MPI_Wtime();<br>
+<br>
+<span class="org-comment-delimiter">// </span><span class="org-comment">the code to benchmark goes here</span><br>
+<br>
+endTime = MPI_Wtime();<br>
+<br>
+executionTime = endTime - startTime;<br>
+</p>
+</pre>
+</div>
+
+<p>
+Your goal is to compute the throughput (in MB/s) and the round-trip latency (in ms) on Okeanos and on the computers in our labs. For each, you should make \(N\) (e.g. 30) experiments, discard 1-2 minimal and maximal values and then average the remaining ones. For throughput, send large messages (millions of bytes); for latency, send short messages (1-10-100 bytes).
+</p>
+
+<p>
+After completing this, extend your code to compute throughput in function of the length of the message. You can use our jupyter notebook <code>draw-bandwidth.ipynb</code> to display results (the data format is: <code>experiment_sequence_number message_size communication_time</code>).
+</p>
+</div>
+</div>
+</div>
+
+<div id="outline-container-sec-7" class="outline-2">
+<h2 id="sec-7"><span class="section-number-2">7</span> Bibliography</h2>
+<div class="outline-text-2" id="text-7">
+<ul class="org-ul">
+<li>MPI standard: <a href="http://mpi-forum.org/docs/mpi-3.1/mpi31-report.pdf">http://mpi-forum.org/docs/mpi-3.1/mpi31-report.pdf</a> 
+</li>
+
+<li>Designing and Building Parallel Programs, Ian Foster  <a href="http://www.mcs.anl.gov/~itf/dbpp/text/node94.html">http://www.mcs.anl.gov/~itf/dbpp/text/node94.html</a>
+</li>
+
+<li></li>
+</ul>
+</div>
+</div>
+</div>
+<div id="postamble" class="status">
+<p class="date">Date: 2021/04/16</p>
+<p class="author">Author: Krzysztof Rządca</p>
+<p class="date">Created: 2021-04-16 Fri 17:09</p>
+<p class="creator"><a href="http://www.gnu.org/software/emacs/">Emacs</a> 25.3.50.1 (<a href="http://orgmode.org">Org</a> mode 8.2.10)</p>
+<p class="validation"><a href="http://validator.w3.org/check?uri=referer">Validate</a></p>
+</div>
+</body>
+</html>
