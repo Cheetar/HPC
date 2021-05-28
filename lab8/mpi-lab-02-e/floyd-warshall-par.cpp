@@ -21,8 +21,9 @@ static void runFloydWarshallParallel(Graph* graph, int numProcesses, int myRank)
 
     /* FIXME: implement */
     for (int k=0; k<m; k++) {
-        int local_k = k % m;
-        int root_rank = (int)k / m;
+        int local_k = k % rowsPerProcess;
+        int root_rank = (int)k / rowsPerProcess;
+
         // Broadcast k-th graph row
         if (root_rank == myRank) {
             // Broadcast root
@@ -46,7 +47,6 @@ static void runFloydWarshallParallel(Graph* graph, int numProcesses, int myRank)
         }
 
         for (int i = 0; i < rowsPerProcess; i++) {
-            int global_i = (myRank * rowsPerProcess) + i;
             for (int j = 0; j < m; j++) {
                 int pathSum = graph->data[i][k] + kth_graph_row[j];
 
@@ -99,7 +99,9 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    std::cerr << "Running the Floyd-Warshall algorithm for a graph with " << numVertices << " vertices." << std::endl;
+    if (myRank == 0) {
+        std::cerr << "Running the Floyd-Warshall algorithm for a graph with " << numVertices << " vertices." << std::endl;
+    }
 
     auto graph = createAndDistributeGraph(numVertices, numProcesses, myRank);
     if (graph == nullptr) {
@@ -108,7 +110,7 @@ int main(int argc, char *argv[]) {
         return 2;
     }
 
-    if (showResults) {
+    if (showResults && (myRank == 0)) {
         collectAndPrintGraph(graph, numProcesses, myRank);
     }
 
@@ -118,17 +120,19 @@ int main(int argc, char *argv[]) {
 
     double endTime = MPI_Wtime();
 
-    std::cerr
-            << "The time required for the Floyd-Warshall algorithm on a "
-            << numVertices
-            << "-node graph with "
-            << numProcesses
-            << " process(es): "
-            << endTime - startTime
-            << std::endl;
-
-    if (showResults) {
-        collectAndPrintGraph(graph, numProcesses, myRank);
+    if (myRank == 0) {
+        std::cerr
+                << "The time required for the Floyd-Warshall algorithm on a "
+                << numVertices
+                << "-node graph with "
+                << numProcesses
+                << " process(es): "
+                << endTime - startTime
+                << std::endl;
+        
+        if (showResults) {
+            collectAndPrintGraph(graph, numProcesses, myRank);
+        }
     }
 
     destroyGraph(graph, numProcesses, myRank);
