@@ -105,7 +105,7 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
     /* the following code just recomputes the appropriate grid fragment */
     /* but does not communicate the partial results */
     do {
-        printf("Rank %d, iteration %d\n", myRank, numIterations);
+        //printf("Rank %d, iteration %d\n", myRank, numIterations);
 
         maxDiff = 0.0;
 
@@ -211,7 +211,7 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
             }
         }
 
-        printf("Rank %d, iteration %d, end of phase one\n", myRank, numIterations);
+        //printf("Rank %d, iteration %d, end of phase one\n", myRank, numIterations);
 
         //////////////////////////////////////////// SECOND PHASE //////////////////////////////////////////////
 
@@ -267,7 +267,7 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
             );
         }
         
-        printf("Rank %d, iteration %d, second phase sent msg\n", myRank, numIterations);
+        //printf("Rank %d, iteration %d, second phase sent msg\n", myRank, numIterations);
 
         if (myRank != 0) {
             MPI_Waitall(2, requests_upper, statuses_upper);
@@ -277,7 +277,7 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
             MPI_Waitall(2, requests_lower, statuses_lower);
         }
 
-        printf("Rank %d, iteration %d, 2nd phase msg received\n", myRank, numIterations);
+        //printf("Rank %d, iteration %d, 2nd phase msg received\n", myRank, numIterations);
 
         // Update white fields on my part of the stencil
         color = 1;
@@ -321,7 +321,7 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
             }
         }
 
-        printf("Rank %d, iteration %d, 2nd phase calculated\n", myRank, numIterations);
+        //printf("Rank %d, iteration %d, 2nd phase calculated\n", myRank, numIterations);
 
         // Root process gathers if all processes have finished
         finished = !(maxDiff > epsilon);
@@ -336,7 +336,7 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
             MPI_COMM_WORLD
         );
 
-        printf("Rank %d, iteration %d, 2nd phase after gather\n", myRank, numIterations);
+        //printf("Rank %d, iteration %d, 2nd phase after gather\n", myRank, numIterations);
 
         if (myRank == 0) {
             all_finished[0] = 1;
@@ -347,7 +347,7 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
             }
         }
 
-        printf("Rank %d, iteration %d, 2nd phase before bcast\n", myRank, numIterations);
+        //printf("Rank %d, iteration %d, 2nd phase before bcast\n", myRank, numIterations);
 
         // Root process broadcasts flag if the computation should continue
         MPI_Bcast(
@@ -358,7 +358,7 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
             MPI_COMM_WORLD
         );
         
-        printf("Rank %d, iteration %d, 2nd phase after bcast\n", myRank, numIterations);
+        //printf("Rank %d, iteration %d, 2nd phase after bcast\n", myRank, numIterations);
 
         ++numIterations;
     } while (!all_finished[0]);
@@ -370,7 +370,7 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
 
     /* no code changes beyond this point should be needed */
 
-    printf("Rank %d, finished\n", myRank);
+    //printf("Rank %d, finished\n", myRank);
 
     return std::make_tuple(numIterations, maxDiff);
 }
