@@ -129,10 +129,10 @@ int main(int argc, char *argv[]) {
                 << " process(es): "
                 << endTime - startTime
                 << std::endl;
-        
-        if (showResults) {
-            collectAndPrintGraph(graph, numProcesses, myRank);
-        }
+    }
+
+    if (showResults) {
+        collectAndPrintGraph(graph, numProcesses, myRank);
     }
 
     destroyGraph(graph, numProcesses, myRank);
