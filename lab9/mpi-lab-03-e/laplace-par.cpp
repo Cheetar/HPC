@@ -321,6 +321,8 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
             }
         }
 
+        printf("Rank %d, iteration %d, 2nd phase calculated\n", myRank, numIterations);
+
         // Root process gathers if all processes have finished
         finished = !(maxDiff > epsilon);
         MPI_Gather(
@@ -334,6 +336,8 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
             MPI_COMM_WORLD
         );
 
+        printf("Rank %d, iteration %d, 2nd phase after gather\n", myRank, numIterations);
+
         if (myRank == 0) {
             all_finished[0] = 1;
             for (int i=0; i<numProcesses; i++) {
@@ -342,6 +346,8 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
                 }
             }
         }
+
+        printf("Rank %d, iteration %d, 2nd phase before bcast\n", myRank, numIterations);
 
         // Root process broadcasts flag if the computation should continue
         MPI_Bcast(
@@ -352,6 +358,8 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
             MPI_COMM_WORLD
         );
         
+        printf("Rank %d, iteration %d, 2nd phase after bcast\n", myRank, numIterations);
+
         ++numIterations;
     } while (!all_finished[0]);
 
