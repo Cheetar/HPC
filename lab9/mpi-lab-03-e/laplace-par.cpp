@@ -114,7 +114,7 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
             MPI_Isend(
                 frag->data[1][startRowIncl],  // White fields in the first row
                 frag->gridDimension/2,
-                MPI_INT,
+                MPI_DOUBLE,
                 myRank - 1,
                 MPI_UPPER_WHITE_MESSAGE_TAG,
                 MPI_COMM_WORLD,
@@ -127,7 +127,7 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
             MPI_Isend(
                 frag->data[1][endRowExcl - 1],  // White fields in the last row
                 frag->gridDimension/2,
-                MPI_INT,
+                MPI_DOUBLE,
                 myRank + 1,
                 MPI_LOWER_WHITE_MESSAGE_TAG,
                 MPI_COMM_WORLD,
@@ -140,7 +140,7 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
             MPI_Irecv(
                 lower_white,
                 frag->gridDimension/2,
-                MPI_INT,
+                MPI_DOUBLE,
                 myRank + 1,
                 MPI_UPPER_WHITE_MESSAGE_TAG,
                 MPI_COMM_WORLD,
@@ -153,7 +153,7 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
             MPI_Irecv(
                 upper_white,
                 frag->gridDimension/2,
-                MPI_INT,
+                MPI_DOUBLE,
                 myRank - 1,
                 MPI_LOWER_WHITE_MESSAGE_TAG,
                 MPI_COMM_WORLD,
@@ -220,7 +220,7 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
             MPI_Isend(
                 frag->data[0][startRowIncl],
                 frag->gridDimension/2,
-                MPI_INT,
+                MPI_DOUBLE,
                 myRank - 1,
                 MPI_UPPER_BLACK_MESSAGE_TAG,
                 MPI_COMM_WORLD,
@@ -233,7 +233,7 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
             MPI_Isend(
                 frag->data[0][endRowExcl - 1],
                 frag->gridDimension/2,
-                MPI_INT,
+                MPI_DOUBLE,
                 myRank + 1,
                 MPI_LOWER_BLACK_MESSAGE_TAG,
                 MPI_COMM_WORLD,
@@ -246,7 +246,7 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
             MPI_Irecv(
                 lower_black,
                 frag->gridDimension/2,
-                MPI_INT,
+                MPI_DOUBLE,
                 myRank + 1,
                 MPI_UPPER_BLACK_MESSAGE_TAG,
                 MPI_COMM_WORLD,
@@ -259,7 +259,7 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
             MPI_Irecv(
                 upper_black,
                 frag->gridDimension/2,
-                MPI_INT,
+                MPI_DOUBLE,
                 myRank - 1,
                 MPI_LOWER_BLACK_MESSAGE_TAG,
                 MPI_COMM_WORLD,
