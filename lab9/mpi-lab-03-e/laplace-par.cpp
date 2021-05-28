@@ -211,6 +211,8 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
             }
         }
 
+        printf("Rank %d, iteration %d, end of phase one\n", myRank, numIterations);
+
         //////////////////////////////////////////// SECOND PHASE //////////////////////////////////////////////
 
         // Send my black field values to upper neighbour
@@ -265,6 +267,8 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
             );
         }
         
+        printf("Rank %d, iteration %d, second phase sent msg\n", myRank, numIterations);
+
         if (myRank != 0) {
             MPI_Waitall(2, requests_upper, statuses_upper);
         }
@@ -272,6 +276,8 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
         if (myRank != numProcesses - 1) {
             MPI_Waitall(2, requests_lower, statuses_lower);
         }
+
+        printf("Rank %d, iteration %d, 2nd phase msg received\n", myRank, numIterations);
 
         // Update white fields on my part of the stencil
         color = 1;
