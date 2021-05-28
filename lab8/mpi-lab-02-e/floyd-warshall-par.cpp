@@ -110,7 +110,7 @@ int main(int argc, char *argv[]) {
         return 2;
     }
 
-    if (showResults && (myRank == 0)) {
+    if (showResults) {
         collectAndPrintGraph(graph, numProcesses, myRank);
     }
 
