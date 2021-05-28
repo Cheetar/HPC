@@ -361,8 +361,11 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
         
         printf("Rank %d, iteration %d, 2nd phase after bcast\n", myRank, numIterations);
 
+        frag->printEntireGrid(myRank,  numProcesses);
+
         ++numIterations;
-    } while (!all_finished[0]);
+    //} while (!all_finished[0]);
+    } while (numIterations < 50);
 
     delete[](upper_white);
     delete[](lower_white);
