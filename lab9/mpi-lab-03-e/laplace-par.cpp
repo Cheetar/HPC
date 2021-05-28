@@ -108,233 +108,247 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
     do {
         maxDiff = 0.0;
 
-        for (int color = 0; color < 2; ++color) {
-            // Send my white field values to upper neighbour
-            if (myRank != 0) {
-                MPI_Isend(
-                    frag->data[1][startRowIncl],  // White fields in the first row
-                    frag->gridDimension/2,
-                    MPI_INT,
-                    myRank - 1,
-                    MPI_UPPER_WHITE_MESSAGE_TAG,
-                    MPI_COMM_WORLD,
-                    &requests[0]
-                );
-            }
-
-            // Send my white field values to lower neighbour 
-            if (myRank != numProcesses - 1) {
-                MPI_Isend(
-                    frag->data[1][endRowExcl],  // White fields in the last row
-                    frag->gridDimension/2,
-                    MPI_INT,
-                    myRank + 1,
-                    MPI_LOWER_WHITE_MESSAGE_TAG,
-                    MPI_COMM_WORLD,
-                    &requests[1]
-                );
-            }
-            
-            // Receive white field data from lower neighbour
-            if (myRank != numProcesses - 1) {
-                MPI_Irecv(
-                    lower_white,
-                    frag->gridDimension/2,
-                    MPI_INT,
-                    myRank + 1,
-                    MPI_UPPER_WHITE_MESSAGE_TAG,
-                    MPI_COMM_WORLD,
-                    &requests[2]
-                );
-            }
-
-            // Receive white field data from upper neighbour
-            if (myRank != numProcesses - 1) {
-                MPI_Irecv(
-                    upper_white,
-                    frag->gridDimension/2,
-                    MPI_INT,
-                    myRank + 1,
-                    MPI_LOWER_WHITE_MESSAGE_TAG,
-                    MPI_COMM_WORLD,
-                    &requests[3]
-                );
-            }
-            
-            MPI_Waitall(4, requests, statuses);
-
-            // Update black fields on my part of the stencil
-            color = 0;
-            for (int rowIdx = startRowIncl; rowIdx < endRowExcl; ++rowIdx) {
-                for (int colIdx = 1 + (rowIdx % 2 == color ? 1 : 0); colIdx < frag->gridDimension - 1; colIdx += 2) {
-                    double tmp;
-
-                    if ((rowIdx == startRowIncl) && (myRank != 0)) {
-                        // Get datapoint from upper neighbour
-                        tmp =
-                            (upper_white[colIdx/2] +
-                            GP(frag, rowIdx + 1, colIdx) +
-                            GP(frag, rowIdx, colIdx - 1) +
-                            GP(frag, rowIdx, colIdx + 1)
-                            ) / 4.0;
-                    }
-                    else if ((rowIdx == endRowExcl - 1) && (myRank != numProcesses - 1)) {
-                        // Get datapoint from lower neighbour
-                        tmp =
-                            (GP(frag, rowIdx - 1, colIdx) +
-                            lower_white[colIdx/2] +
-                            GP(frag, rowIdx, colIdx - 1) +
-                            GP(frag, rowIdx, colIdx + 1)
-                            ) / 4.0;
-                    }
-                    else {
-                        tmp =
-                            (GP(frag, rowIdx - 1, colIdx) +
-                            GP(frag, rowIdx + 1, colIdx) +
-                            GP(frag, rowIdx, colIdx - 1) +
-                            GP(frag, rowIdx, colIdx + 1)
-                            ) / 4.0;
-                    }
-                    double diff = GP(frag, rowIdx, colIdx);
-                    GP(frag, rowIdx, colIdx) = (1.0 - omega) * diff + omega * tmp;
-                    diff = fabs(diff - GP(frag, rowIdx, colIdx));
-
-                    if (diff > maxDiff) {
-                        maxDiff = diff;
-                    }
-                }
-            }
-
-            //////////////////////////////////////////// SECOND PHASE //////////////////////////////////////////////
-
-            // Send my black field values to upper neighbour
-            if (myRank != 0) {
-                MPI_Isend(
-                    frag->data[0][startRowIncl],
-                    frag->gridDimension/2,
-                    MPI_INT,
-                    myRank - 1,
-                    MPI_UPPER_BLACK_MESSAGE_TAG,
-                    MPI_COMM_WORLD,
-                    &requests[0]
-                );
-            }
-
-            // Send my black field values to lower neighbour 
-            if (myRank != numProcesses - 1) {
-                MPI_Isend(
-                    frag->data[0][endRowExcl],
-                    frag->gridDimension/2,
-                    MPI_INT,
-                    myRank + 1,
-                    MPI_LOWER_BLACK_MESSAGE_TAG,
-                    MPI_COMM_WORLD,
-                    &requests[1]
-                );
-            }
-            
-            // Receive black field data from lower neighbour
-            if (myRank != numProcesses - 1) {
-                MPI_Irecv(
-                    lower_black,
-                    frag->gridDimension/2,
-                    MPI_INT,
-                    myRank + 1,
-                    MPI_UPPER_BLACK_MESSAGE_TAG,
-                    MPI_COMM_WORLD,
-                    &requests[2]
-                );
-            }
-
-            // Receive white field data from upper neighbour
-            if (myRank != numProcesses - 1) {
-                MPI_Irecv(
-                    upper_black,
-                    frag->gridDimension/2,
-                    MPI_INT,
-                    myRank + 1,
-                    MPI_LOWER_BLACK_MESSAGE_TAG,
-                    MPI_COMM_WORLD,
-                    &requests[3]
-                );
-            }
-            
-            MPI_Waitall(4, requests, statuses);
-
-            // Update white fields on my part of the stencil
-            color = 1;
-            for (int rowIdx = startRowIncl; rowIdx < endRowExcl; ++rowIdx) {
-                for (int colIdx = 1 + (rowIdx % 2 == color ? 1 : 0); colIdx < frag->gridDimension - 1; colIdx += 2) {
-                    double tmp;
-
-                    if ((rowIdx == startRowIncl) && (myRank != 0)) {
-                        // Get datapoint from upper neighbour
-                        tmp =
-                            (upper_black[colIdx/2] +
-                            GP(frag, rowIdx + 1, colIdx) +
-                            GP(frag, rowIdx, colIdx - 1) +
-                            GP(frag, rowIdx, colIdx + 1)
-                            ) / 4.0;
-                    }
-                    else if ((rowIdx == endRowExcl - 1) && (myRank != numProcesses - 1)) {
-                        // Get datapoint from lower neighbour
-                        tmp =
-                            (GP(frag, rowIdx - 1, colIdx) +
-                            lower_black[colIdx/2] +
-                            GP(frag, rowIdx, colIdx - 1) +
-                            GP(frag, rowIdx, colIdx + 1)
-                            ) / 4.0;
-                    }
-                    else {
-                        tmp =
-                            (GP(frag, rowIdx - 1, colIdx) +
-                            GP(frag, rowIdx + 1, colIdx) +
-                            GP(frag, rowIdx, colIdx - 1) +
-                            GP(frag, rowIdx, colIdx + 1)
-                            ) / 4.0;
-                    }
-                    double diff = GP(frag, rowIdx, colIdx);
-                    GP(frag, rowIdx, colIdx) = (1.0 - omega) * diff + omega * tmp;
-                    diff = fabs(diff - GP(frag, rowIdx, colIdx));
-
-                    if (diff > maxDiff) {
-                        maxDiff = diff;
-                    }
-                }
-            }
-
-            // Root process gathers if all processes have finished
-            finished = maxDiff > epsilon;
-            MPI_Gather(
-                &finished,
-                1 /* just one number */,
+        // Send my white field values to upper neighbour
+        if (myRank != 0) {
+            MPI_Isend(
+                frag->data[1][startRowIncl],  // White fields in the first row
+                frag->gridDimension/2,
                 MPI_INT,
-                partialResults,
-                1 /* one number per process */,
-                MPI_INT,
-                ROOT_PROCESS,
-                MPI_COMM_WORLD
-            );
-
-            if (myRank == 0) {
-                all_finished[0] = 1;
-                for (int i=0; i<numProcesses; i++) {
-                    if (partialResults[i] == 0) {
-                        all_finished[0] = 0;
-                    }
-                }
-            }
-
-            // Root process broadcasts flag if the computation should continue
-            MPI_Bcast(
-                all_finished,
-                1,  // msg length
-                MPI_INT,
-                myRank,
-                MPI_COMM_WORLD
+                myRank - 1,
+                MPI_UPPER_WHITE_MESSAGE_TAG,
+                MPI_COMM_WORLD,
+                &requests[0]
             );
         }
 
+        // Send my white field values to lower neighbour 
+        if (myRank != numProcesses - 1) {
+            MPI_Isend(
+                frag->data[1][endRowExcl],  // White fields in the last row
+                frag->gridDimension/2,
+                MPI_INT,
+                myRank + 1,
+                MPI_LOWER_WHITE_MESSAGE_TAG,
+                MPI_COMM_WORLD,
+                &requests[1]
+            );
+        }
+        
+        // Receive white field data from lower neighbour
+        if (myRank != numProcesses - 1) {
+            MPI_Irecv(
+                lower_white,
+                frag->gridDimension/2,
+                MPI_INT,
+                myRank + 1,
+                MPI_UPPER_WHITE_MESSAGE_TAG,
+                MPI_COMM_WORLD,
+                &requests[2]
+            );
+        }
+
+        // Receive white field data from upper neighbour
+        if (myRank != 0) {
+            MPI_Irecv(
+                upper_white,
+                frag->gridDimension/2,
+                MPI_INT,
+                myRank - 1,
+                MPI_LOWER_WHITE_MESSAGE_TAG,
+                MPI_COMM_WORLD,
+                &requests[3]
+            );
+        }
+        
+        if (myRank != 0) {
+            MPI_Wait(requests[0], statuses[0]);
+            MPI_Wait(requests[3], statuses[3]);
+        }
+
+        if (myRank != numProcesses - 1) {
+            MPI_Wait(requests[1], statuses[1]);
+            MPI_Wait(requests[2], statuses[2]);
+        }
+
+        // Update black fields on my part of the stencil
+        color = 0;
+        for (int rowIdx = startRowIncl; rowIdx < endRowExcl; ++rowIdx) {
+            for (int colIdx = 1 + (rowIdx % 2 == color ? 1 : 0); colIdx < frag->gridDimension - 1; colIdx += 2) {
+                double tmp;
+
+                if ((rowIdx == startRowIncl) && (myRank != 0)) {
+                    // Get datapoint from upper neighbour
+                    tmp =
+                        (upper_white[colIdx/2] +
+                        GP(frag, rowIdx + 1, colIdx) +
+                        GP(frag, rowIdx, colIdx - 1) +
+                        GP(frag, rowIdx, colIdx + 1)
+                        ) / 4.0;
+                }
+                else if ((rowIdx == endRowExcl - 1) && (myRank != numProcesses - 1)) {
+                    // Get datapoint from lower neighbour
+                    tmp =
+                        (GP(frag, rowIdx - 1, colIdx) +
+                        lower_white[colIdx/2] +
+                        GP(frag, rowIdx, colIdx - 1) +
+                        GP(frag, rowIdx, colIdx + 1)
+                        ) / 4.0;
+                }
+                else {
+                    tmp =
+                        (GP(frag, rowIdx - 1, colIdx) +
+                        GP(frag, rowIdx + 1, colIdx) +
+                        GP(frag, rowIdx, colIdx - 1) +
+                        GP(frag, rowIdx, colIdx + 1)
+                        ) / 4.0;
+                }
+                double diff = GP(frag, rowIdx, colIdx);
+                GP(frag, rowIdx, colIdx) = (1.0 - omega) * diff + omega * tmp;
+                diff = fabs(diff - GP(frag, rowIdx, colIdx));
+
+                if (diff > maxDiff) {
+                    maxDiff = diff;
+                }
+            }
+        }
+
+        //////////////////////////////////////////// SECOND PHASE //////////////////////////////////////////////
+
+        // Send my black field values to upper neighbour
+        if (myRank != 0) {
+            MPI_Isend(
+                frag->data[0][startRowIncl],
+                frag->gridDimension/2,
+                MPI_INT,
+                myRank - 1,
+                MPI_UPPER_BLACK_MESSAGE_TAG,
+                MPI_COMM_WORLD,
+                &requests[0]
+            );
+        }
+
+        // Send my black field values to lower neighbour 
+        if (myRank != numProcesses - 1) {
+            MPI_Isend(
+                frag->data[0][endRowExcl],
+                frag->gridDimension/2,
+                MPI_INT,
+                myRank + 1,
+                MPI_LOWER_BLACK_MESSAGE_TAG,
+                MPI_COMM_WORLD,
+                &requests[1]
+            );
+        }
+        
+        // Receive black field data from lower neighbour
+        if (myRank != numProcesses - 1) {
+            MPI_Irecv(
+                lower_black,
+                frag->gridDimension/2,
+                MPI_INT,
+                myRank + 1,
+                MPI_UPPER_BLACK_MESSAGE_TAG,
+                MPI_COMM_WORLD,
+                &requests[2]
+            );
+        }
+
+        // Receive white field data from upper neighbour
+        if (myRank != 0) {
+            MPI_Irecv(
+                upper_black,
+                frag->gridDimension/2,
+                MPI_INT,
+                myRank - 1,
+                MPI_LOWER_BLACK_MESSAGE_TAG,
+                MPI_COMM_WORLD,
+                &requests[3]
+            );
+        }
+        
+        if (myRank != 0) {
+            MPI_Wait(requests[0], statuses[0]);
+            MPI_Wait(requests[3], statuses[3]);
+        }
+
+        if (myRank != numProcesses - 1) {
+            MPI_Wait(requests[1], statuses[1]);
+            MPI_Wait(requests[2], statuses[2]);
+        }
+
+        // Update white fields on my part of the stencil
+        color = 1;
+        for (int rowIdx = startRowIncl; rowIdx < endRowExcl; ++rowIdx) {
+            for (int colIdx = 1 + (rowIdx % 2 == color ? 1 : 0); colIdx < frag->gridDimension - 1; colIdx += 2) {
+                double tmp;
+
+                if ((rowIdx == startRowIncl) && (myRank != 0)) {
+                    // Get datapoint from upper neighbour
+                    tmp =
+                        (upper_black[colIdx/2] +
+                        GP(frag, rowIdx + 1, colIdx) +
+                        GP(frag, rowIdx, colIdx - 1) +
+                        GP(frag, rowIdx, colIdx + 1)
+                        ) / 4.0;
+                }
+                else if ((rowIdx == endRowExcl - 1) && (myRank != numProcesses - 1)) {
+                    // Get datapoint from lower neighbour
+                    tmp =
+                        (GP(frag, rowIdx - 1, colIdx) +
+                        lower_black[colIdx/2] +
+                        GP(frag, rowIdx, colIdx - 1) +
+                        GP(frag, rowIdx, colIdx + 1)
+                        ) / 4.0;
+                }
+                else {
+                    tmp =
+                        (GP(frag, rowIdx - 1, colIdx) +
+                        GP(frag, rowIdx + 1, colIdx) +
+                        GP(frag, rowIdx, colIdx - 1) +
+                        GP(frag, rowIdx, colIdx + 1)
+                        ) / 4.0;
+                }
+                double diff = GP(frag, rowIdx, colIdx);
+                GP(frag, rowIdx, colIdx) = (1.0 - omega) * diff + omega * tmp;
+                diff = fabs(diff - GP(frag, rowIdx, colIdx));
+
+                if (diff > maxDiff) {
+                    maxDiff = diff;
+                }
+            }
+        }
+
+        // Root process gathers if all processes have finished
+        finished = maxDiff > epsilon;
+        MPI_Gather(
+            &finished,
+            1 /* just one number */,
+            MPI_INT,
+            partialResults,
+            1 /* one number per process */,
+            MPI_INT,
+            ROOT_PROCESS,
+            MPI_COMM_WORLD
+        );
+
+        if (myRank == 0) {
+            all_finished[0] = 1;
+            for (int i=0; i<numProcesses; i++) {
+                if (partialResults[i] == 0) {
+                    all_finished[0] = 0;
+                }
+            }
+        }
+
+        // Root process broadcasts flag if the computation should continue
+        MPI_Bcast(
+            all_finished,
+            1,  // msg length
+            MPI_INT,
+            myRank,
+            MPI_COMM_WORLD
+        );
+        
         ++numIterations;
     } while (!all_finished[0]);
 
