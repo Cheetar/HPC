@@ -370,6 +370,8 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
 
     /* no code changes beyond this point should be needed */
 
+    printf("Rank %d, finished\n", myRank);
+
     return std::make_tuple(numIterations, maxDiff);
 }
 
