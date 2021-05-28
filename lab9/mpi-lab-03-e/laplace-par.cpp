@@ -77,17 +77,16 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
     int startRowIncl = frag->firstRowIdxIncl + (myRank == 0 ? 1 : 0);
     int endRowExcl = frag->lastRowIdxExcl - (myRank == numProcesses - 1 ? 1 : 0);
 
-    printf("Rank %d, startRowIncl: %d\n", myRank, startRowIncl);
-    printf("Rank %d, endRowExcl: %d\n", myRank, endRowExcl);
-
     double maxDiff = 0;
     int numIterations = 0;
     int finished = 0;
     int *all_finished = new int[1];
     int color = 0;
 
-    MPI_Request requests[8];
-    MPI_Status statuses[8];
+    MPI_Request requests_upper[2];
+    MPI_Request requests_lower[2];
+    MPI_Status statuses_upper[2];
+    MPI_Status statuses_lower[2];
 
     int *upper_white = new int[frag->gridDimension/2];
     int *lower_white = new int[frag->gridDimension/2];
@@ -119,7 +118,7 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
                 myRank - 1,
                 MPI_UPPER_WHITE_MESSAGE_TAG,
                 MPI_COMM_WORLD,
-                &requests[0]
+                &requests_upper[0]
             );
         }
 
@@ -132,7 +131,7 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
                 myRank + 1,
                 MPI_LOWER_WHITE_MESSAGE_TAG,
                 MPI_COMM_WORLD,
-                &requests[1]
+                &requests_lower[0]
             );
         }
         
@@ -145,7 +144,7 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
                 myRank + 1,
                 MPI_UPPER_WHITE_MESSAGE_TAG,
                 MPI_COMM_WORLD,
-                &requests[2]
+                &requests_lower[1]
             );
         }
 
@@ -158,18 +157,16 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
                 myRank - 1,
                 MPI_LOWER_WHITE_MESSAGE_TAG,
                 MPI_COMM_WORLD,
-                &requests[3]
+                &requests_upper[1]
             );
         }
         
         if (myRank != 0) {
-            MPI_Wait(&requests[0], &statuses[0]);
-            MPI_Wait(&requests[3], &statuses[3]);
+            MPI_Waitall(2, requests_upper, statuses_upper);
         }
 
         if (myRank != numProcesses - 1) {
-            MPI_Wait(&requests[1], &statuses[1]);
-            MPI_Wait(&requests[2], &statuses[2]);
+            MPI_Waitall(2, requests_lower, statuses_lower);
         }
 
         // Update black fields on my part of the stencil
@@ -225,7 +222,7 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
                 myRank - 1,
                 MPI_UPPER_BLACK_MESSAGE_TAG,
                 MPI_COMM_WORLD,
-                &requests[0]
+                &requests_upper[0]
             );
         }
 
@@ -238,7 +235,7 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
                 myRank + 1,
                 MPI_LOWER_BLACK_MESSAGE_TAG,
                 MPI_COMM_WORLD,
-                &requests[1]
+                &requests_lower[0]
             );
         }
         
@@ -251,7 +248,7 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
                 myRank + 1,
                 MPI_UPPER_BLACK_MESSAGE_TAG,
                 MPI_COMM_WORLD,
-                &requests[2]
+                &requests_lower[1]
             );
         }
 
@@ -264,18 +261,16 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
                 myRank - 1,
                 MPI_LOWER_BLACK_MESSAGE_TAG,
                 MPI_COMM_WORLD,
-                &requests[3]
+                &requests_upper[1]
             );
         }
         
         if (myRank != 0) {
-            MPI_Wait(&requests[0], &statuses[0]);
-            MPI_Wait(&requests[3], &statuses[3]);
+            MPI_Waitall(2, requests_upper, statuses_upper);
         }
 
         if (myRank != numProcesses - 1) {
-            MPI_Wait(&requests[1], &statuses[1]);
-            MPI_Wait(&requests[2], &statuses[2]);
+            MPI_Waitall(2, requests_lower, statuses_lower);
         }
 
         // Update white fields on my part of the stencil
