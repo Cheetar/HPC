@@ -126,7 +126,7 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
         if (myRank != numProcesses - 1) {
             printf("Printing row of data");
             for (int i=0; i<numProcesses; i++) {
-                printf("%d ", frag->data[1][endRowExcl - 1][i];
+                printf("%d ", frag->data[1][endRowExcl - 1][i]);
             }
             printf("\n");
 
