@@ -83,7 +83,7 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
     double maxDiff = 0;
     int numIterations = 0;
     int finished = 0;
-    int all_finished = 0;
+    int *all_finished = new int[1];
     int color = 0;
 
     MPI_Request requests[8];
@@ -317,10 +317,10 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
             );
 
             if (myRank == 0) {
-                all_finished = 1;
+                all_finished[0] = 1;
                 for (int i=0; i<numProcesses; i++) {
                     if (partialResults[i] == 0) {
-                        all_finished = 0;
+                        all_finished[0] = 0;
                     }
                 }
             }
@@ -336,7 +336,7 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
         }
 
         ++numIterations;
-    } while (!all_finished);
+    } while (!all_finished[0]);
 
     delete[](upper_white);
     delete[](lower_white);
