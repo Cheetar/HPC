@@ -161,13 +161,13 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
         }
         
         if (myRank != 0) {
-            MPI_Wait(requests[0], statuses[0]);
-            MPI_Wait(requests[3], statuses[3]);
+            MPI_Wait(&requests[0], &statuses[0]);
+            MPI_Wait(&requests[3], &statuses[3]);
         }
 
         if (myRank != numProcesses - 1) {
-            MPI_Wait(requests[1], statuses[1]);
-            MPI_Wait(requests[2], statuses[2]);
+            MPI_Wait(&requests[1], &statuses[1]);
+            MPI_Wait(&requests[2], &statuses[2]);
         }
 
         // Update black fields on my part of the stencil
@@ -267,13 +267,13 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
         }
         
         if (myRank != 0) {
-            MPI_Wait(requests[0], statuses[0]);
-            MPI_Wait(requests[3], statuses[3]);
+            MPI_Wait(&requests[0], &statuses[0]);
+            MPI_Wait(&requests[3], &statuses[3]);
         }
 
         if (myRank != numProcesses - 1) {
-            MPI_Wait(requests[1], statuses[1]);
-            MPI_Wait(requests[2], statuses[2]);
+            MPI_Wait(&requests[1], &statuses[1]);
+            MPI_Wait(&requests[2], &statuses[2]);
         }
 
         // Update white fields on my part of the stencil
