@@ -37,6 +37,11 @@ Graph* createAndDistributeGraph(int numVertices, int numProcesses, int myRank) {
     assert(graph->numVertices % numProcesses == 0);
     int rowsPerProcess = graph->numVertices / numProcesses;
 
+    printf("MyRank: %d\n", myRank);
+    printf("numProcesses: %d\n", numProcesses);
+    printf("numVertices: %d\n", numVertices);
+    printf("rowsPerProcess: %d\n", rowsPerProcess);
+
     for (int i = myRank * rowsPerProcess; i < (myRank + 1) * rowsPerProcess; ++i) {
         initializeGraphRow(graph->data[i- (myRank * rowsPerProcess)], i, graph->numVertices);
     }
