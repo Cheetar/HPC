@@ -58,6 +58,12 @@ void collectAndPrintGraph(Graph* graph, int numProcesses, int myRank) {
 
     /* FIXME: implement */
     if (myRank == 0) {
+        // Print my part of matrix
+        for (int j=0; j < rowsPerProcess; j++) {
+            printGraphRow(graph->data[j], -1 /* this number is not used*/, graph->numVertices);
+        }
+
+        // Print other parts of matrix
         for (int processNum=1; processNum < numProcesses; processNum++) {
             for (int j=0; j < rowsPerProcess; j++) {
                 MPI_Recv(buf,
@@ -67,9 +73,8 @@ void collectAndPrintGraph(Graph* graph, int numProcesses, int myRank) {
                          13,
                          MPI_COMM_WORLD,
                          status);
+                printGraphRow(buf, -1 /* this number is not used*/, graph->numVertices);
                 }
-
-                printGraphRow(buf, 0, graph->numVertices);
         }
     } else {
         for (int j=0; j < rowsPerProcess; j++) {
