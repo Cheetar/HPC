@@ -324,7 +324,7 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
         printf("Rank %d, iteration %d, 2nd phase calculated\n", myRank, numIterations);
 
         // Root process gathers if all processes have finished
-        printf("Rank %d, iteration %d, maxDiff: %d, epsilon: %d\n", myRank, numIterations, maxDiff, epsilon);
+        printf("Rank %d, iteration %d, maxDiff: %f, epsilon: %f\n", myRank, numIterations, maxDiff, epsilon);
         finished = !(maxDiff > epsilon);
         MPI_Gather(
             &finished,
