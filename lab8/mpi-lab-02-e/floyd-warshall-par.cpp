@@ -14,8 +14,49 @@
 
 static void runFloydWarshallParallel(Graph* graph, int numProcesses, int myRank) {
     assert(numProcesses <= graph->numVertices);
+    int m = graph->numVertices;
+    assert(graph->numVertices % numProcesses == 0);
+    int rowsPerProcess = graph->numVertices / numProcesses;
+    int *kth_graph_row = new int[graph->numVertices];
 
     /* FIXME: implement */
+    for (int k=0; k<m; k++) {
+        int local_k = k % m;
+        int root_rank = (int)k / m;
+        // Broadcast k-th graph row
+        if (root_rank == myRank) {
+            // Broadcast root
+            kth_graph_row = graph->data[local_k];
+            MPI_Bcast(
+                kth_graph_row,
+                m,
+                MPI_INT,
+                root_rank,
+                MPI_COMM_WORLD
+            );
+        } else {
+            // Receive broadcast
+            MPI_Bcast(
+                kth_graph_row,
+                m,
+                MPI_INT,
+                root_rank,
+                MPI_COMM_WORLD
+            );
+        }
+
+        for (int i = 0; i < rowsPerProcess; i++) {
+            int global_i = (myRank * rowsPerProcess) + i;
+            for (int j = 0; j < m; j++) {
+                int pathSum = graph->data[i][k] + kth_graph_row[j];
+
+                if (graph->data[i][j] > pathSum) {
+                    graph->data[i][j] = pathSum;
+                }
+            }
+        }
+    }
+    // delete(kth_graph_row);
 }
 
 
