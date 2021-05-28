@@ -319,7 +319,7 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
         }
 
         // Root process gathers if all processes have finished
-        finished = maxDiff > epsilon;
+        finished = !(maxDiff > epsilon);
         MPI_Gather(
             &finished,
             1 /* just one number */,
@@ -411,16 +411,18 @@ int main(int argc, char *argv[]) {
             ((double) endTime.tv_sec + ((double) endTime.tv_usec / 1000000.0)) -
             ((double) startTime.tv_sec + ((double) startTime.tv_usec / 1000000.0));
 
-    std::cerr << "Statistics: duration(s)="
-              << std::fixed
-              << std::setprecision(10)
-              << duration << " #iters="
-              << std::get<0>(result)
-              << " diff="
-              << std::get<1>(result)
-              << " epsilon="
-              << epsilon
-              << std::endl;
+    if (myRank == 0) {
+        std::cerr << "Statistics: duration(s)="
+                << std::fixed
+                << std::setprecision(10)
+                << duration << " #iters="
+                << std::get<0>(result)
+                << " diff="
+                << std::get<1>(result)
+                << " epsilon="
+                << epsilon
+                << std::endl;
+    }
 
     if (isVerbose) {
         gridFragment->printEntireGrid(myRank, numProcesses);
