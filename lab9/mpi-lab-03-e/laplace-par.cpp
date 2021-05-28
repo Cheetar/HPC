@@ -106,6 +106,8 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
     /* the following code just recomputes the appropriate grid fragment */
     /* but does not communicate the partial results */
     do {
+        printf("Rank %d, iteration %d\n", myRank, numIterations);
+
         maxDiff = 0.0;
 
         // Send my white field values to upper neighbour
