@@ -71,6 +71,9 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
     int startRowIncl = frag->firstRowIdxIncl + (myRank == 0 ? 1 : 0);
     int endRowExcl = frag->lastRowIdxExcl - (myRank == numProcesses - 1 ? 1 : 0);
 
+    printf("Rank %d, startRowIncl: %d\n", myRank, startRowIncl);
+    printf("Rank %d, endRowExcl: %d\n", myRank, endRowExcl);
+
     double maxDiff = 0;
     int numIterations = 0;
 
