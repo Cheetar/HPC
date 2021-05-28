@@ -124,6 +124,12 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
 
         // Send my white field values to lower neighbour 
         if (myRank != numProcesses - 1) {
+            printf("Printing row of data");
+            for (int i=0; i<numProcesses; i++) {
+                printf("%d ", frag->data[1][endRowExcl - 1][i];
+            }
+            printf("\n");
+
             MPI_Isend(
                 frag->data[1][endRowExcl - 1],  // White fields in the last row
                 frag->gridDimension/2,
