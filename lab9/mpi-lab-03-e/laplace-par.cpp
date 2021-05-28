@@ -354,7 +354,7 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
             all_finished,
             1,  // msg length
             MPI_INT,
-            myRank,
+            ROOT_PROCESS,
             MPI_COMM_WORLD
         );
         
