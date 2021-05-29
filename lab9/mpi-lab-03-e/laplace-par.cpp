@@ -122,7 +122,7 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
                 &frag->data[0][0],
                 numPointsInOneColor,
                 MPI_DOUBLE,
-                nextProcessNo,
+                prevProcessNo,
                 MPI_LOWER_BLACK_MESSAGE_TAG,
                 MPI_COMM_WORLD,
                 &requests[1]
@@ -133,7 +133,7 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
                 &frag->data[1][frag->lastRowIdxExcl],
                 numPointsInOneColor,
                 MPI_DOUBLE,
-                prevProcessNo,
+                nextProcessNo,
                 MPI_UPPER_WHITE_MESSAGE_TAG,
                 MPI_COMM_WORLD,
                 &requests[2]
@@ -155,7 +155,7 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
                 &frag->data[1][frag->lastRowIdxExcl - 1],  // Last white row
                 numPointsInOneColor,
                 MPI_DOUBLE,
-                prevProcessNo,
+                nextProcessNo,
                 MPI_LOWER_WHITE_MESSAGE_TAG,
                 MPI_COMM_WORLD,
                 &requests[4]
@@ -188,7 +188,7 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
                 &frag->data[0][1],  // First black row
                 numPointsInOneColor,
                 MPI_DOUBLE,
-                nextProcessNo,
+                prevProcessNo,
                 MPI_UPPER_BLACK_MESSAGE_TAG,
                 MPI_COMM_WORLD,
                 &requests[7]
