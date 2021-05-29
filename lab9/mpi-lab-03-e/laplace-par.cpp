@@ -104,6 +104,17 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
 
         int numPointsInOneColor = frag->gridDimension / 2;
 
+        printf("Rank %d, data:\n", myRank);
+        for (int color=0; color<=1; color++) {  
+            for (int row=0; row<2 + frag->gridDimension/numProcesses; row++) {
+                for (int col=0; col < numPointsInOneColor; col++) {
+                    printf("%f ", frag->data[color][row][col]);
+                }
+                printf("\n");
+            }
+            printf("\n\n");
+        }
+
         printf("Rank %d, starting\n", myRank);
 
         // White to lower
@@ -205,17 +216,7 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
         );
 
         printf("Rank %d, h\n", myRank);        
-
-        printf("Rank %d, data:\n");
-        for (int color=0; color<=1; color++) {  
-            for (int row=0; row<2 + frag->gridDimension/numProcesses; row++) {
-                for (int col=0; col < numPointsInOneColor; col++) {
-                    printf("%f ", frag->data[color][row][col]);
-                }
-                printf("\n");
-            }
-            printf("\n\n");
-        }
+        
 
         // MPI_Waitall(8, requests, statuses);
 
