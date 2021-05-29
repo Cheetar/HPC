@@ -212,7 +212,7 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
                 for (int col=0; col < numPointsInOneColor; col++) {
                     printf("%f ", frag->data[color][row][col]);
                 }
-                printf("\n")
+                printf("\n");
             }
             printf("\n\n");
         }
