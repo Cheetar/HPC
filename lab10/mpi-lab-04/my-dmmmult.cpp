@@ -22,7 +22,7 @@ int main(int argc, char* argv[]) {
     MPI_Init(&argc, &argv); /* intialize the library with parameters caught by the runtime */
     MPI_Comm_size(MPI_COMM_WORLD, &numProcesses);
     MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
-    
+
     MPI_Status status;
 
 	int source,                /* task id of message source */
@@ -31,9 +31,9 @@ int main(int argc, char* argv[]) {
 	averow, extra, offset, /* used to determine rows sent to each worker */
 	i, j, k, rc;           /* misc */
 
-    double* A = new double[n*n];
-    double* B = new double[n*n];
-    double* C = new double[n*n];
+    double* A = new double[n][n];
+    double* B = new double[n][n];
+    double* C = new double[n][n];
 
     // Matrix multiplication
     if (myRank == ROOT_PROCESS) {
@@ -42,9 +42,9 @@ int main(int argc, char* argv[]) {
         // Initlize matrices
         for (int i = 0; i < n; ++i) {
             for (int j = 0; j < n; ++j) {
-                A[i*n + j] = doubleDist(rnd);
-                B[i*n + j] = doubleDist(rnd);
-                C[i*n + j] = 0;
+                A[i][j] = doubleDist(rnd);
+                B[i][j] = doubleDist(rnd);
+                C[i][j] = 0;
             }
         }
 
