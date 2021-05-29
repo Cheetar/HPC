@@ -104,6 +104,7 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
 
         int numPointsInOneColor = frag->gridDimension / 2;
 
+        /*
         printf("Rank %d, data:\n", myRank);
         for (int color=0; color<=1; color++) {  
             for (int row=0; row<2 + frag->gridDimension/numProcesses; row++) {
@@ -113,11 +114,7 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
                 printf("\n");
             }
             printf("\n\n");
-        }
-
-        printf("Rank %d, starting\n", myRank);
-
-        printf("Rank %d, frag->lastRowIdxExcl - frag->firstRowIdxIncl - 1 = %d\n", myRank, frag->lastRowIdxExcl - frag->firstRowIdxIncl - 1);
+        }*/
 
         // White to lower
         MPI_Send(
@@ -128,8 +125,6 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
                 MPI_LOWER_WHITE_MESSAGE_TAG,
                 MPI_COMM_WORLD
         );
-
-        printf("Rank %d, a\n", myRank);
 
         // White from upper
         MPI_Recv(
@@ -142,8 +137,6 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
                 &statuses[0]
         );
 
-        printf("Rank %d, b\n", myRank);
-
         // Black to lower
         MPI_Send(
                 frag->data[0][frag->lastRowIdxExcl - frag->firstRowIdxIncl],  // Last black row
@@ -153,8 +146,6 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
                 MPI_LOWER_BLACK_MESSAGE_TAG,
                 MPI_COMM_WORLD
         );
-
-        printf("Rank %d, c\n", myRank);
 
         // Black from upper
         MPI_Recv(
@@ -167,8 +158,6 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
                 &statuses[1]
         );
 
-        printf("Rank %d, d\n", myRank);
-
         // White to upper
         MPI_Send(
                 frag->data[1][1],  // First white row
@@ -178,8 +167,6 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
                 MPI_UPPER_WHITE_MESSAGE_TAG,
                 MPI_COMM_WORLD
         );
-
-        printf("Rank %d, e\n", myRank);
 
         // White from lower
         MPI_Recv(
@@ -192,8 +179,6 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
                 &statuses[2]
         );
 
-        printf("Rank %d, f\n", myRank);
-
         // Black to upper
         MPI_Send(
                 frag->data[0][1],  // First black row
@@ -203,8 +188,6 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
                 MPI_UPPER_BLACK_MESSAGE_TAG,
                 MPI_COMM_WORLD
         );
-
-        printf("Rank %d, g\n", myRank);
 
         // Black from lower
         MPI_Recv(
@@ -217,8 +200,8 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
                 &statuses[3]
         );
 
-        printf("Rank %d, h\n", myRank);        
-        
+      
+        /*
         printf("Rank %d, data:\n", myRank);
         for (int color=0; color<=1; color++) {  
             for (int row=0; row<2 + frag->gridDimension/numProcesses; row++) {
@@ -228,26 +211,14 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
                 printf("\n");
             }
             printf("\n\n");
-        }
+        }*/
 
         // MPI_Waitall(8, requests, statuses);
 
         // Calculate my grid fragment
         for (int color = 0; color < 2; ++color) {
             for (int rowIdx = startRowIncl; rowIdx < endRowExcl; ++rowIdx) {
-                for (int colIdx = 1 + (rowIdx % 2 == color ? 1 : 0); colIdx < frag->gridDimension - 1; colIdx += 2) {
-                    printf("Rank %d, color %d\n", myRank, color);  
-                    printf("Rank %d, t1\n", myRank);  
-                    GP(frag, rowIdx - 1, colIdx);
-                    printf("Rank %d, t2\n", myRank);  
-                    GP(frag, rowIdx + 1, colIdx);
-                    printf("Rank %d, t3\n", myRank);  
-                    GP(frag, rowIdx, colIdx - 1);
-                    printf("Rank %d, t4\n", myRank);  
-                    GP(frag, rowIdx, colIdx + 1);
-                    printf("Rank %d, t5\n", myRank);  
-                    GP(frag, rowIdx, colIdx);
-                    printf("Rank %d, t6\n", myRank); 
+                for (int colIdx = 1 + (rowIdx % 2 == color ? 1 : 0); colIdx < frag->gridDimension - 1; colIdx += 2) { 
                     double tmp =
                             (GP(frag, rowIdx - 1, colIdx) +
                              GP(frag, rowIdx + 1, colIdx) +
@@ -261,17 +232,11 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
                     if (diff > maxDiff) {
                         maxDiff = diff;
                     }
-
-                    printf("Rank %d, t7\n", myRank); 
                 }
             }
         }
 
-        printf("Rank %d, i\n", myRank);
-
         frag->printEntireGrid(myRank,  numProcesses);
-
-        printf("Rank %d, j\n", myRank);
 
         ++numIterations;
     //} while (maxDiff > epsilon);
