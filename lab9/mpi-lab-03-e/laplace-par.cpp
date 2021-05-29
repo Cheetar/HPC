@@ -114,7 +114,7 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
             for (int row=0; row<4; row++) {
                 printf("Printing row of data ");
                 for (int i=0; i<frag->gridDimension/2; i++) {
-                    printf("%d ", frag->data[1][row][i]);
+                    printf("%d ", frag->data[0][row][i]);
                 }
                 printf("\n");
             }
@@ -135,7 +135,7 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
             for (int row=0; row<4; row++) {
                 printf("Printing row of data ");
                 for (int i=0; i<frag->gridDimension/2; i++) {
-                    printf("%d ", frag->data[1][row][i]);
+                    printf("%d ", frag->data[0][row][i]);
                 }
                 printf("\n");
             }
