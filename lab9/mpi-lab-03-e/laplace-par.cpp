@@ -106,95 +106,92 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
 
         int numPointsInOneColor = frag->gridDimension / 2;
 
+        // White to lower
+        MPI_Send(
+                &frag->data[1][frag->lastRowIdxExcl - 1],  // Last white row
+                numPointsInOneColor,
+                MPI_DOUBLE,
+                nextProcessNo,
+                MPI_LOWER_WHITE_MESSAGE_TAG,
+                MPI_COMM_WORLD
+        );
+
         // White from upper
-        MPI_Irecv(
+        MPI_Recv(
                 &frag->data[1][0],
                 numPointsInOneColor,
                 MPI_DOUBLE,
                 prevProcessNo,
                 MPI_LOWER_WHITE_MESSAGE_TAG,
                 MPI_COMM_WORLD,
-                &requests[0]
+                &statuses[0]
+        );
+
+        // Black to lower
+        MPI_Send(
+                &frag->data[0][frag->lastRowIdxExcl - 1],  // Last black row
+                numPointsInOneColor,
+                MPI_DOUBLE,
+                nextProcessNo,
+                MPI_LOWER_BLACK_MESSAGE_TAG,
+                MPI_COMM_WORLD
         );
 
         // Black from upper
-        MPI_Irecv(
+        MPI_Recv(
                 &frag->data[0][0],
                 numPointsInOneColor,
                 MPI_DOUBLE,
                 prevProcessNo,
                 MPI_LOWER_BLACK_MESSAGE_TAG,
                 MPI_COMM_WORLD,
-                &requests[1]
+                &statuses[1]
+        );
+
+        // White to upper
+        MPI_Send(
+                &frag->data[1][1],  // First white row
+                numPointsInOneColor,
+                MPI_DOUBLE,
+                prevProcessNo,
+                MPI_UPPER_WHITE_MESSAGE_TAG,
+                MPI_COMM_WORLD
         );
 
         // White from lower
-        MPI_Irecv(
+        MPI_Recv(
                 &frag->data[1][frag->lastRowIdxExcl],
                 numPointsInOneColor,
                 MPI_DOUBLE,
                 nextProcessNo,
                 MPI_UPPER_WHITE_MESSAGE_TAG,
                 MPI_COMM_WORLD,
-                &requests[2]
+                &statuses[2]
+        );
+
+        // Black to upper
+        MPI_Send(
+                &frag->data[0][1],  // First black row
+                numPointsInOneColor,
+                MPI_DOUBLE,
+                prevProcessNo,
+                MPI_UPPER_BLACK_MESSAGE_TAG,
+                MPI_COMM_WORLD
         );
 
         // Black from lower
-        MPI_Irecv(
+        MPI_Recv(
                 &frag->data[0][frag->lastRowIdxExcl],
                 numPointsInOneColor,
                 MPI_DOUBLE,
                 nextProcessNo,
                 MPI_UPPER_BLACK_MESSAGE_TAG,
                 MPI_COMM_WORLD,
-                &requests[3]
+                &statuses[3]
         );
+        
 
-        // White to lower
-        MPI_Isend(
-                &frag->data[1][frag->lastRowIdxExcl - 1],  // Last white row
-                numPointsInOneColor,
-                MPI_DOUBLE,
-                nextProcessNo,
-                MPI_LOWER_WHITE_MESSAGE_TAG,
-                MPI_COMM_WORLD,
-                &requests[4]
-        );
-
-        // Black to lower
-        MPI_Isend(
-                &frag->data[0][frag->lastRowIdxExcl - 1],  // Last black row
-                numPointsInOneColor,
-                MPI_DOUBLE,
-                nextProcessNo,
-                MPI_LOWER_BLACK_MESSAGE_TAG,
-                MPI_COMM_WORLD,
-                &requests[5]
-        );
-
-        // White to upper
-        MPI_Isend(
-                &frag->data[1][1],  // First white row
-                numPointsInOneColor,
-                MPI_DOUBLE,
-                prevProcessNo,
-                MPI_UPPER_WHITE_MESSAGE_TAG,
-                MPI_COMM_WORLD,
-                &requests[6]
-        );
-
-        // Black to upper
-        MPI_Isend(
-                &frag->data[0][1],  // First black row
-                numPointsInOneColor,
-                MPI_DOUBLE,
-                prevProcessNo,
-                MPI_UPPER_BLACK_MESSAGE_TAG,
-                MPI_COMM_WORLD,
-                &requests[7]
-        );
-
-        MPI_Waitall(8, requests, statuses);
+        // MPI_Waitall(8, requests, statuses);
 
 
         // Calculate my grid fragment
