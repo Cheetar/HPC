@@ -80,6 +80,12 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
     double maxDiff = 0;
     int numIterations = 0;
 
+    if (myRank == 0) {
+            frag->printEntireGrid(myRank,  numProcesses);
+        }
+
+    return std::make_tuple(numIterations, maxDiff);
+
     /* TODO: change the following code fragment */
     /* Implement asynchronous communication of neighboring elements */
     /* and computation of the grid */
@@ -106,7 +112,7 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
 
         // White from upper
         MPI_Irecv(
-                frag->data[1][0],
+                *frag->data[1][0],
                 numPointsInOneColor,
                 MPI_DOUBLE,
                 prevProcessNo,
