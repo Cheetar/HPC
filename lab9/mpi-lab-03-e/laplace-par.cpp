@@ -120,7 +120,7 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
             }
 
             MPI_Isend(
-                frag->data[1][startRowIncl],  // White fields in the first row
+                frag->data[1][1],  // White fields in the first row
                 frag->gridDimension/2,
                 MPI_DOUBLE,
                 myRank - 1,
@@ -141,7 +141,7 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
             }
 
             MPI_Isend(
-                frag->data[1][endRowExcl - 1],  // White fields in the last row
+                frag->data[1][lastRowIdxExcl - 1 - firstRowIdxIncl + 1],  // White fields in the last row
                 frag->gridDimension/2,
                 MPI_DOUBLE,
                 myRank + 1,
@@ -234,7 +234,7 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
         // Send my black field values to upper neighbour
         if (myRank != 0) {
             MPI_Isend(
-                frag->data[0][startRowIncl],
+                frag->data[0][1],  // Black first row
                 frag->gridDimension/2,
                 MPI_DOUBLE,
                 myRank - 1,
@@ -247,7 +247,7 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
         // Send my black field values to lower neighbour 
         if (myRank != numProcesses - 1) {
             MPI_Isend(
-                frag->data[0][endRowExcl - 1],
+                frag->data[0][lastRowIdxExcl - 1 - firstRowIdxIncl + 1],  // Black last row
                 frag->gridDimension/2,
                 MPI_DOUBLE,
                 myRank + 1,
@@ -381,7 +381,7 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
 
         ++numIterations;
     //} while (!all_finished[0]);
-    } while (numIterations < 50);
+    } while (numIterations < 5);
 
     delete[](upper_white);
     delete[](lower_white);
