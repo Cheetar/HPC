@@ -1,6 +1,6 @@
 CC := CC
 LFLAGS :=
-ALL := my-dmmmult blas-dmmmult laplace-seq
+ALL := other-dmmmult blas-dmmmult laplace-seq
 
 all : $(ALL)
 
