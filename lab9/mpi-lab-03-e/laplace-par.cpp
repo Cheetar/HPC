@@ -213,6 +213,15 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
         for (int color = 0; color < 2; ++color) {
             for (int rowIdx = startRowIncl; rowIdx < endRowExcl; ++rowIdx) {
                 for (int colIdx = 1 + (rowIdx % 2 == color ? 1 : 0); colIdx < frag->gridDimension - 1; colIdx += 2) {
+                    printf("Rank %d, t1\n", myRank);  
+                    GP(frag, rowIdx - 1, colIdx);
+                    printf("Rank %d, t2\n", myRank);  
+                    GP(frag, rowIdx + 1, colIdx);
+                    printf("Rank %d, t3\n", myRank);  
+                    GP(frag, rowIdx, colIdx - 1);
+                    printf("Rank %d, t4\n", myRank);  
+                    GP(frag, rowIdx, colIdx + 1);
+                    printf("Rank %d, t5\n", myRank);  
                     double tmp =
                             (GP(frag, rowIdx - 1, colIdx) +
                              GP(frag, rowIdx + 1, colIdx) +
