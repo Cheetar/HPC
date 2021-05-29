@@ -124,87 +124,91 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
         }*/
 
         // White to lower
-        MPI_Send(
+        MPI_Isend(
                 frag->data[1][frag->lastRowIdxExcl - frag->firstRowIdxIncl],  // Last white row
                 numPointsInOneColor,
                 MPI_DOUBLE,
                 nextProcessNo,
                 MPI_LOWER_WHITE_MESSAGE_TAG,
-                MPI_COMM_WORLD
+                MPI_COMM_WORLD,
+                &requests[0]
         );
 
         // White from upper
-        MPI_Recv(
+        MPI_Irecv(
                 frag->data[1][0],
                 numPointsInOneColor,
                 MPI_DOUBLE,
                 prevProcessNo,
                 MPI_LOWER_WHITE_MESSAGE_TAG,
                 MPI_COMM_WORLD,
-                &statuses[0]
+                &requests[1]
         );
 
         // Black to lower
-        MPI_Send(
+        MPI_Isend(
                 frag->data[0][frag->lastRowIdxExcl - frag->firstRowIdxIncl],  // Last black row
                 numPointsInOneColor,
                 MPI_DOUBLE,
                 nextProcessNo,
                 MPI_LOWER_BLACK_MESSAGE_TAG,
-                MPI_COMM_WORLD
+                MPI_COMM_WORLD,
+                &requests[2]
         );
 
         // Black from upper
-        MPI_Recv(
+        MPI_Irecv(
                 frag->data[0][0],
                 numPointsInOneColor,
                 MPI_DOUBLE,
                 prevProcessNo,
                 MPI_LOWER_BLACK_MESSAGE_TAG,
                 MPI_COMM_WORLD,
-                &statuses[1]
+                &requests[3]
         );
 
         // White to upper
-        MPI_Send(
+        MPI_Isend(
                 frag->data[1][1],  // First white row
                 numPointsInOneColor,
                 MPI_DOUBLE,
                 prevProcessNo,
                 MPI_UPPER_WHITE_MESSAGE_TAG,
-                MPI_COMM_WORLD
+                MPI_COMM_WORLD,
+                &requests[4]
         );
 
         // White from lower
-        MPI_Recv(
+        MPI_Irecv(
                 frag->data[1][frag->lastRowIdxExcl - frag->firstRowIdxIncl + 1],
                 numPointsInOneColor,
                 MPI_DOUBLE,
                 nextProcessNo,
                 MPI_UPPER_WHITE_MESSAGE_TAG,
                 MPI_COMM_WORLD,
-                &statuses[2]
+                &requests[5]
         );
 
         // Black to upper
-        MPI_Send(
+        MPI_Isend(
                 frag->data[0][1],  // First black row
                 numPointsInOneColor,
                 MPI_DOUBLE,
                 prevProcessNo,
                 MPI_UPPER_BLACK_MESSAGE_TAG,
-                MPI_COMM_WORLD
+                MPI_COMM_WORLD,
+                &requests[6]
         );
 
         // Black from lower
-        MPI_Recv(
+        MPI_Irecv(
                 frag->data[0][frag->lastRowIdxExcl - frag->firstRowIdxIncl + 1],
                 numPointsInOneColor,
                 MPI_DOUBLE,
                 nextProcessNo,
                 MPI_UPPER_BLACK_MESSAGE_TAG,
                 MPI_COMM_WORLD,
-                &statuses[3]
+                &requests[7]
         );
 
       
@@ -220,7 +224,7 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
             printf("\n\n");
         }*/
 
-        // MPI_Waitall(8, requests, statuses);
+        MPI_Waitall(8, requests, statuses);
 
         // Calculate my grid fragment
         for (int color = 0; color < 2; ++color) {
@@ -244,7 +248,7 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
         }
 
         finished = !(maxDiff > epsilon);
-        
+
         MPI_Allreduce(
             &finished,
             &allFinished,
