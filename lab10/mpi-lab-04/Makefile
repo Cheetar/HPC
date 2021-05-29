@@ -1,14 +1,11 @@
 CC := CC
 LFLAGS :=
-ALL := other-dmmmult blas-dmmmult laplace-seq
+ALL := my-dmmmult blas-dmmmult laplace-seq
 
 all : $(ALL)
 
-other-dmmmult: other-dmmmult.cpp
+my-dmmmult: my-dmmmult.cpp
 	$(CC) -o $@ $<
-
-#my-dmmmult: my-dmmmult.cpp
-#	$(CC) -o $@ $<
 
 blas-dmmmult: blas-dmmmult.cpp
 	$(CC) -o $@ $<
