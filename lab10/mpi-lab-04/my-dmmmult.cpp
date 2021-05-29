@@ -11,9 +11,9 @@
 static int const MPI_FRONT_MESSAGE_TAG = 1;
 static int const MPI_BACK_MESSAGE_TAG = 2;
 static int const ROOT_PROCESS = 0;
+static int const n = 100;
 
 int main(int argc, char* argv[]) {
-    const long long n{std::stoi(std::string{argv[1]})};
     std::mt19937_64 rnd;
     std::uniform_real_distribution<double> doubleDist{0, 1};
 
@@ -22,18 +22,15 @@ int main(int argc, char* argv[]) {
     MPI_Init(&argc, &argv); /* intialize the library with parameters caught by the runtime */
     MPI_Comm_size(MPI_COMM_WORLD, &numProcesses);
     MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
-
     MPI_Status status;
 
 	int source,                /* task id of message source */
-	dest,                  /* task id of message destination */
 	rows,                  /* rows of matrix A sent to each worker */
-	averow, extra, offset, /* used to determine rows sent to each worker */
-	i, j, k, rc;           /* misc */
+	averow, extra, offset; /* used to determine rows sent to each worker */
 
-    double* A = new double[n][n];
-    double* B = new double[n][n];
-    double* C = new double[n][n];
+    double A[n][n];
+    double B[n][n];
+    double C[n][n];
 
     // Matrix multiplication
     if (myRank == ROOT_PROCESS) {
@@ -51,7 +48,7 @@ int main(int argc, char* argv[]) {
         assert(n%numProcesses == 0);
         averow = n/numProcesses;
         offset = 0;
-        for (dest=1; dest<=numProcesses; dest++)
+        for (int dest=1; dest<=numProcesses; dest++)
         {
             rows = averow;   	
             MPI_Send(&offset, 1, MPI_INT, dest, MPI_FRONT_MESSAGE_TAG, MPI_COMM_WORLD);
@@ -63,7 +60,7 @@ int main(int argc, char* argv[]) {
         }
 
         /* Receive results from worker tasks */
-        for (i=1; i<=numProcesses; i++)
+        for (int i=1; i<=numProcesses; i++)
         {
             source = i;
             MPI_Recv(&offset, 1, MPI_INT, source, MPI_BACK_MESSAGE_TAG, MPI_COMM_WORLD, &status);
@@ -81,11 +78,11 @@ int main(int argc, char* argv[]) {
         MPI_Recv(&A, rows*n, MPI_DOUBLE, ROOT_PROCESS, MPI_FRONT_MESSAGE_TAG, MPI_COMM_WORLD, &status);
         MPI_Recv(&B, n*n, MPI_DOUBLE, ROOT_PROCESS, MPI_FRONT_MESSAGE_TAG, MPI_COMM_WORLD, &status);
 
-        for (k=0; k<n; k++)
-            for (i=0; i<rows; i++)
+        for (int k=0; k<n; k++)
+            for (int i=0; i<rows; i++)
             {
             C[i][k] = 0.0;
-            for (j=0; j<n; j++)
+            for (int j=0; j<n; j++)
                 C[i][k] = C[i][k] + A[i][j] * B[j][k];
             }
         MPI_Send(&offset, 1, MPI_INT, ROOT_PROCESS, MPI_BACK_MESSAGE_TAG, MPI_COMM_WORLD);
