@@ -119,7 +119,7 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
 
         // White to lower
         MPI_Send(
-                &frag->data[1][frag->lastRowIdxExcl - 1],  // Last white row
+                &frag->data[1][frag->lastRowIdxExcl - frag->firstRowIdxIncl - 1],  // Last white row
                 numPointsInOneColor,
                 MPI_DOUBLE,
                 nextProcessNo,
@@ -144,7 +144,7 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
 
         // Black to lower
         MPI_Send(
-                &frag->data[0][frag->lastRowIdxExcl - 1],  // Last black row
+                &frag->data[0][frag->lastRowIdxExcl - frag->firstRowIdxIncl- 1],  // Last black row
                 numPointsInOneColor,
                 MPI_DOUBLE,
                 nextProcessNo,
@@ -181,7 +181,7 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
 
         // White from lower
         MPI_Recv(
-                &frag->data[1][frag->lastRowIdxExcl],
+                &frag->data[1][frag->lastRowIdxExcl - frag->firstRowIdxIncl],
                 numPointsInOneColor,
                 MPI_DOUBLE,
                 nextProcessNo,
@@ -206,7 +206,7 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
 
         // Black from lower
         MPI_Recv(
-                &frag->data[0][frag->lastRowIdxExcl],
+                &frag->data[0][frag->lastRowIdxExcl - frag->firstRowIdxIncl],
                 numPointsInOneColor,
                 MPI_DOUBLE,
                 nextProcessNo,
@@ -217,6 +217,16 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
 
         printf("Rank %d, h\n", myRank);        
         
+        printf("Rank %d, data:\n", myRank);
+        for (int color=0; color<=1; color++) {  
+            for (int row=0; row<2 + frag->gridDimension/numProcesses; row++) {
+                for (int col=0; col < numPointsInOneColor; col++) {
+                    printf("%f ", frag->data[color][row][col]);
+                }
+                printf("\n");
+            }
+            printf("\n\n");
+        }
 
         // MPI_Waitall(8, requests, statuses);
 
