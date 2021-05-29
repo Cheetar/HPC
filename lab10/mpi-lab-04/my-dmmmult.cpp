@@ -79,12 +79,12 @@ int main(int argc, char* argv[]) {
         MPI_Recv(&A, rows*n, MPI_DOUBLE, ROOT_PROCESS, MPI_FRONT_MESSAGE_TAG, MPI_COMM_WORLD, &status);
         MPI_Recv(&B, NCA*n, MPI_DOUBLE, ROOT_PROCESS, MPI_FRONT_MESSAGE_TAG, MPI_COMM_WORLD, &status);
 
-        for (k=0; k<NCB; k++)
+        for (k=0; k<n; k++)
             for (i=0; i<rows; i++)
             {
-            c[i][k] = 0.0;
-            for (j=0; j<NCA; j++)
-                c[i][k] = c[i][k] + a[i][j] * b[j][k];
+            C[i][k] = 0.0;
+            for (j=0; j<n; j++)
+                C[i][k] = C[i][k] + A[i][j] * B[j][k];
             }
         MPI_Send(&offset, 1, MPI_INT, ROOT_PROCESS, MPI_BACK_MESSAGE_TAG, MPI_COMM_WORLD);
         MPI_Send(&rows, 1, MPI_INT, ROOT_PROCESS, MPI_BACK_MESSAGE_TAG, MPI_COMM_WORLD);
