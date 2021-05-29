@@ -121,7 +121,7 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
 
         // White to lower
         MPI_Send(
-                &frag->data[1][frag->lastRowIdxExcl - frag->firstRowIdxIncl - 1],  // Last white row
+                &frag->data[1][frag->lastRowIdxExcl - frag->firstRowIdxIncl],  // Last white row
                 numPointsInOneColor,
                 MPI_DOUBLE,
                 nextProcessNo,
@@ -146,7 +146,7 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
 
         // Black to lower
         MPI_Send(
-                &frag->data[0][frag->lastRowIdxExcl - frag->firstRowIdxIncl- 1],  // Last black row
+                &frag->data[0][frag->lastRowIdxExcl - frag->firstRowIdxIncl],  // Last black row
                 numPointsInOneColor,
                 MPI_DOUBLE,
                 nextProcessNo,
@@ -183,7 +183,7 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
 
         // White from lower
         MPI_Recv(
-                &frag->data[1][frag->lastRowIdxExcl - frag->firstRowIdxIncl],
+                &frag->data[1][frag->lastRowIdxExcl - frag->firstRowIdxIncl + 1],
                 numPointsInOneColor,
                 MPI_DOUBLE,
                 nextProcessNo,
@@ -208,7 +208,7 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
 
         // Black from lower
         MPI_Recv(
-                &frag->data[0][frag->lastRowIdxExcl - frag->firstRowIdxIncl],
+                &frag->data[0][frag->lastRowIdxExcl - frag->firstRowIdxIncl + 1],
                 numPointsInOneColor,
                 MPI_DOUBLE,
                 nextProcessNo,
