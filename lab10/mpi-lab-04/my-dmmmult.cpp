@@ -25,11 +25,11 @@ int main(int argc, char* argv[]) {
     MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
     MPI_Status status;
 
-    int rows;
+    int rows, offset;
     double A[n][n];
     double B[n][n];
     double C[n][n];
-    
+
     // Matrix multiplication
     if (myRank == ROOT_PROCESS) {
         auto startTime = std::chrono::steady_clock::now();
@@ -43,12 +43,11 @@ int main(int argc, char* argv[]) {
             }
         }
 
-        assert(n%numProcesses == 0);
-        int averow = n/numProcesses;
-        int offset = 0;
+        assert(n%numProcesses == 0); // For simplicity
+        int rows = n/numProcesses;
+        offset = 0;
         for (int dest=1; dest<numProcesses; dest++)
-        {
-            int rows = averow;   	
+        {	
             MPI_Send(
                 &offset,
                 1,
@@ -84,7 +83,6 @@ int main(int argc, char* argv[]) {
             offset = offset + rows;
         }
 
-        /* Receive results from worker tasks */
         for (int i=1; i<numProcesses; i++) {
             int source = i;
             MPI_Recv(
