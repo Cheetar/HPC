@@ -90,9 +90,7 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
     do {
         maxDiff = 0.0;
 
-        if (myRank == 0) {
-            frag->printEntireGrid(myRank,  numProcesses);
-        }
+        frag->printEntireGrid(myRank,  numProcesses);
 
         // Send and receive data from neighbors
         int prevProcessNo;
