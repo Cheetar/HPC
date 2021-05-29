@@ -22,6 +22,8 @@ int main(int argc, char* argv[]) {
     MPI_Init(&argc, &argv); /* intialize the library with parameters caught by the runtime */
     MPI_Comm_size(MPI_COMM_WORLD, &numProcesses);
     MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
+    
+    MPI_Status status;
 
 	int source,                /* task id of message source */
 	dest,                  /* task id of message destination */
@@ -77,7 +79,7 @@ int main(int argc, char* argv[]) {
         MPI_Recv(&offset, 1, MPI_INT, ROOT_PROCESS, MPI_FRONT_MESSAGE_TAG, MPI_COMM_WORLD, &status);
         MPI_Recv(&rows, 1, MPI_INT, ROOT_PROCESS, MPI_FRONT_MESSAGE_TAG, MPI_COMM_WORLD, &status);
         MPI_Recv(&A, rows*n, MPI_DOUBLE, ROOT_PROCESS, MPI_FRONT_MESSAGE_TAG, MPI_COMM_WORLD, &status);
-        MPI_Recv(&B, NCA*n, MPI_DOUBLE, ROOT_PROCESS, MPI_FRONT_MESSAGE_TAG, MPI_COMM_WORLD, &status);
+        MPI_Recv(&B, n*n, MPI_DOUBLE, ROOT_PROCESS, MPI_FRONT_MESSAGE_TAG, MPI_COMM_WORLD, &status);
 
         for (k=0; k<n; k++)
             for (i=0; i<rows; i++)
