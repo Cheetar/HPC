@@ -6,6 +6,7 @@
 #include <iostream> // HPC can into CPP!
 #include <random>
 #include <chrono>
+#include <cassert>
 #import <mpi.h>
 
 static int const MPI_FRONT_MESSAGE_TAG = 1;
