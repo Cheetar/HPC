@@ -106,6 +106,8 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
 
         int numPointsInOneColor = frag->gridDimension / 2;
 
+        printf("Rank %d, starting\n", myRank);
+
         // White to lower
         MPI_Send(
                 &frag->data[1][frag->lastRowIdxExcl - 1],  // Last white row
@@ -115,6 +117,8 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
                 MPI_LOWER_WHITE_MESSAGE_TAG,
                 MPI_COMM_WORLD
         );
+
+        printf("Rank %d, a\n", myRank);
 
         // White from upper
         MPI_Recv(
@@ -127,6 +131,8 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
                 &statuses[0]
         );
 
+        printf("Rank %d, b\n", myRank);
+
         // Black to lower
         MPI_Send(
                 &frag->data[0][frag->lastRowIdxExcl - 1],  // Last black row
@@ -136,6 +142,8 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
                 MPI_LOWER_BLACK_MESSAGE_TAG,
                 MPI_COMM_WORLD
         );
+
+        printf("Rank %d, c\n", myRank);
 
         // Black from upper
         MPI_Recv(
@@ -148,6 +156,8 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
                 &statuses[1]
         );
 
+        printf("Rank %d, d\n", myRank);
+
         // White to upper
         MPI_Send(
                 &frag->data[1][1],  // First white row
@@ -157,6 +167,8 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
                 MPI_UPPER_WHITE_MESSAGE_TAG,
                 MPI_COMM_WORLD
         );
+
+        printf("Rank %d, e\n", myRank);
 
         // White from lower
         MPI_Recv(
@@ -169,6 +181,8 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
                 &statuses[2]
         );
 
+        printf("Rank %d, f\n", myRank);
+
         // Black to upper
         MPI_Send(
                 &frag->data[0][1],  // First black row
@@ -178,6 +192,8 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
                 MPI_UPPER_BLACK_MESSAGE_TAG,
                 MPI_COMM_WORLD
         );
+
+        printf("Rank %d, g\n", myRank);
 
         // Black from lower
         MPI_Recv(
@@ -189,7 +205,8 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
                 MPI_COMM_WORLD,
                 &statuses[3]
         );
-        
+
+        printf("Rank %d, h\n", myRank);        
 
         // MPI_Waitall(8, requests, statuses);
 
