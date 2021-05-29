@@ -230,7 +230,11 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
             }
         }
 
+        printf("Rank %d, i\n", myRank);
+
         frag->printEntireGrid(myRank,  numProcesses);
+
+        printf("Rank %d, j\n", myRank);
 
         ++numIterations;
     //} while (maxDiff > epsilon);
