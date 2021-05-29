@@ -80,6 +80,7 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
     double maxDiff = 0;
     int numIterations = 0;
     int finished = 0;
+    int allFinished = 0;
 
     int *partialResults;
     if (myRank == 0) {
@@ -242,42 +243,19 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
             }
         }
 
-        // Root process gathers if all processes have finished
         finished = !(maxDiff > epsilon);
-        MPI_Gather(
+        
+        MPI_Allreduce(
             &finished,
-            1 /* just one number */,
+            &allFinished,
+            1,
             MPI_INT,
-            partialResults,
-            1 /* one number per process */,
-            MPI_INT,
-            ROOT_PROCESS,
+            MPI_MIN,
             MPI_COMM_WORLD
         );
-
-        if (myRank == 0) {
-            finished = 1;
-            for (int i=0; i<numProcesses; i++) {
-                if (partialResults[i] == 0) {
-                    finished = 0;
-                }
-            }
-        }
-
-        // Root process broadcasts flag if the computation should continue
-        MPI_Bcast(
-            &finished,
-            1,  // msg length
-            MPI_INT,
-            ROOT_PROCESS,
-            MPI_COMM_WORLD
-        );
-
-        //frag->printEntireGrid(myRank,  numProcesses);
 
         ++numIterations;
-    //} while (maxDiff > epsilon);
-    } while (!finished);
+    } while (!allFinished);
 
     /* no code changes beyond this point should be needed */
 
