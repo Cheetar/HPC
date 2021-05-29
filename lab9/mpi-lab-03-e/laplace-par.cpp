@@ -96,7 +96,7 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
     do {
         maxDiff = 0.0;
 
-        frag->printEntireGrid(myRank,  numProcesses);
+        //frag->printEntireGrid(myRank,  numProcesses);
 
         // Send and receive data from neighbors
         int prevProcessNo;
@@ -243,7 +243,6 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
         }
 
         // Root process gathers if all processes have finished
-        printf("Rank %d, iteration %d, maxDiff: %f, epsilon: %f\n", myRank, numIterations, maxDiff, epsilon);
         finished = !(maxDiff > epsilon);
         MPI_Gather(
             &finished,
@@ -256,8 +255,6 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
             MPI_COMM_WORLD
         );
 
-        printf("Rank %d, iteration %d, 2nd phase after gather\n", myRank, numIterations);
-
         if (myRank == 0) {
             finished = 1;
             for (int i=0; i<numProcesses; i++) {
@@ -266,8 +263,6 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
                 }
             }
         }
-
-        printf("Rank %d, iteration %d, 2nd phase before bcast\n", myRank, numIterations);
 
         // Root process broadcasts flag if the computation should continue
         MPI_Bcast(
@@ -278,7 +273,7 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
             MPI_COMM_WORLD
         );
 
-        frag->printEntireGrid(myRank,  numProcesses);
+        //frag->printEntireGrid(myRank,  numProcesses);
 
         ++numIterations;
     //} while (maxDiff > epsilon);
