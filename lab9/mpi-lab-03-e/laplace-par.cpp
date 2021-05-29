@@ -238,6 +238,8 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
                     if (diff > maxDiff) {
                         maxDiff = diff;
                     }
+
+                    printf("Rank %d, t7\n", myRank); 
                 }
             }
         }
