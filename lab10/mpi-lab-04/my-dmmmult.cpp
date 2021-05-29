@@ -6,6 +6,7 @@
 #include <iostream> // HPC can into CPP!
 #include <random>
 #include <chrono>
+#import <mpi.h>
 
 int main(int argc, char* argv[]) {
     const long long n{std::stoi(std::string{argv[1]})};
