@@ -141,7 +141,7 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
             }
 
             MPI_Isend(
-                frag->data[1][lastRowIdxExcl - 1 - firstRowIdxIncl + 1],  // White fields in the last row
+                frag->data[1][frag->lastRowIdxExcl - 1 - frag->firstRowIdxIncl + 1],  // White fields in the last row
                 frag->gridDimension/2,
                 MPI_DOUBLE,
                 myRank + 1,
@@ -247,7 +247,7 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
         // Send my black field values to lower neighbour 
         if (myRank != numProcesses - 1) {
             MPI_Isend(
-                frag->data[0][lastRowIdxExcl - 1 - firstRowIdxIncl + 1],  // Black last row
+                frag->data[0][frag->lastRowIdxExcl - 1 - frag->firstRowIdxIncl + 1],  // Black last row
                 frag->gridDimension/2,
                 MPI_DOUBLE,
                 myRank + 1,
