@@ -80,10 +80,7 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
     double maxDiff = 0;
     int numIterations = 0;
 
-
     frag->printEntireGrid(myRank,  numProcesses);
-
-    return std::make_tuple(numIterations, maxDiff);
 
     /* TODO: change the following code fragment */
     /* Implement asynchronous communication of neighboring elements */
@@ -111,7 +108,7 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
 
         // White from upper
         MPI_Irecv(
-                frag->data[1][0],
+                &frag->data[1][0],
                 numPointsInOneColor,
                 MPI_DOUBLE,
                 prevProcessNo,
@@ -122,7 +119,7 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
 
         // Black from upper
         MPI_Irecv(
-                frag->data[0][0],
+                &frag->data[0][0],
                 numPointsInOneColor,
                 MPI_DOUBLE,
                 nextProcessNo,
@@ -133,7 +130,7 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
 
         // White from lower
         MPI_Irecv(
-                frag->data[1][frag->lastRowIdxExcl],
+                &frag->data[1][frag->lastRowIdxExcl],
                 numPointsInOneColor,
                 MPI_DOUBLE,
                 prevProcessNo,
@@ -144,7 +141,7 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
 
         // Black from lower
         MPI_Irecv(
-                frag->data[0][frag->lastRowIdxExcl],
+                &frag->data[0][frag->lastRowIdxExcl],
                 numPointsInOneColor,
                 MPI_DOUBLE,
                 nextProcessNo,
@@ -155,7 +152,7 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
 
         // White to lower
         MPI_Isend(
-                frag->data[1][frag->lastRowIdxExcl - 1],  // Last white row
+                &frag->data[1][frag->lastRowIdxExcl - 1],  // Last white row
                 numPointsInOneColor,
                 MPI_DOUBLE,
                 prevProcessNo,
@@ -166,7 +163,7 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
 
         // Black to lower
         MPI_Isend(
-                frag->data[0][frag->lastRowIdxExcl - 1],  // Last black row
+                &frag->data[0][frag->lastRowIdxExcl - 1],  // Last black row
                 numPointsInOneColor,
                 MPI_DOUBLE,
                 nextProcessNo,
@@ -177,7 +174,7 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
 
         // White to upper
         MPI_Isend(
-                frag->data[1][1],  // First white row
+                &frag->data[1][1],  // First white row
                 numPointsInOneColor,
                 MPI_DOUBLE,
                 prevProcessNo,
@@ -188,7 +185,7 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
 
         // Black to upper
         MPI_Isend(
-                frag->data[0][1],  // First black row
+                &frag->data[0][1],  // First black row
                 numPointsInOneColor,
                 MPI_DOUBLE,
                 nextProcessNo,
@@ -221,9 +218,7 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
             }
         }
 
-        if (myRank == 0) {
-            frag->printEntireGrid(myRank,  numProcesses);
-        }
+        frag->printEntireGrid(myRank,  numProcesses);
 
         ++numIterations;
     //} while (maxDiff > epsilon);
@@ -283,16 +278,18 @@ int main(int argc, char *argv[]) {
             ((double) endTime.tv_sec + ((double) endTime.tv_usec / 1000000.0)) -
             ((double) startTime.tv_sec + ((double) startTime.tv_usec / 1000000.0));
 
-    std::cerr << "Statistics: duration(s)="
-              << std::fixed
-              << std::setprecision(10)
-              << duration << " #iters="
-              << std::get<0>(result)
-              << " diff="
-              << std::get<1>(result)
-              << " epsilon="
-              << epsilon
-              << std::endl;
+    if (myRank == 0) {
+        std::cerr << "Statistics: duration(s)="
+                << std::fixed
+                << std::setprecision(10)
+                << duration << " #iters="
+                << std::get<0>(result)
+                << " diff="
+                << std::get<1>(result)
+                << " epsilon="
+                << epsilon
+                << std::endl;
+    }
 
     if (isVerbose) {
         gridFragment->printEntireGrid(myRank, numProcesses);
