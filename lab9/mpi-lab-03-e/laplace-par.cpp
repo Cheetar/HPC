@@ -117,6 +117,8 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
 
         printf("Rank %d, starting\n", myRank);
 
+        printf("Rank %d, frag->lastRowIdxExcl - frag->firstRowIdxIncl - 1 = %d\n", myRank, frag->lastRowIdxExcl - frag->firstRowIdxIncl - 1);
+
         // White to lower
         MPI_Send(
                 &frag->data[1][frag->lastRowIdxExcl - frag->firstRowIdxIncl - 1],  // Last white row
