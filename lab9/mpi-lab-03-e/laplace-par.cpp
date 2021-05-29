@@ -86,7 +86,7 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
         partialResults = new int[numProcesses];
     }
 
-    frag->printEntireGrid(myRank,  numProcesses);
+    //frag->printEntireGrid(myRank,  numProcesses);
 
     /* TODO: change the following code fragment */
     /* Implement asynchronous communication of neighboring elements */
