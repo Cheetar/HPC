@@ -49,7 +49,7 @@ int main(int argc, char* argv[]) {
         assert(n%numProcesses == 0);
         averow = n/numProcesses;
         offset = 0;
-        for (int dest=1; dest<=numProcesses; dest++)
+        for (int dest=1; dest<numProcesses; dest++)
         {
             rows = averow;   	
             MPI_Send(&offset, 1, MPI_INT, dest, MPI_FRONT_MESSAGE_TAG, MPI_COMM_WORLD);
@@ -61,7 +61,7 @@ int main(int argc, char* argv[]) {
         }
 
         /* Receive results from worker tasks */
-        for (int i=1; i<=numProcesses; i++)
+        for (int i=1; i<numProcesses; i++)
         {
             source = i;
             MPI_Recv(&offset, 1, MPI_INT, source, MPI_BACK_MESSAGE_TAG, MPI_COMM_WORLD, &status);
