@@ -4,8 +4,11 @@ ALL := my-dmmmult blas-dmmmult laplace-seq
 
 all : $(ALL)
 
-my-dmmmult: my-dmmmult.cpp
+other-dmmmult: other-dmmmult.cpp
 	$(CC) -o $@ $<
+
+#my-dmmmult: my-dmmmult.cpp
+#	$(CC) -o $@ $<
 
 blas-dmmmult: blas-dmmmult.cpp
 	$(CC) -o $@ $<
