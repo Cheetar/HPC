@@ -8,6 +8,7 @@
 #include <iostream>
 #include <fstream>
 #include "densematgen.h"
+#include <vector>
 
 const static bool DEBUG = true;
 const static int ROOT_PROCESS = 0;
@@ -41,6 +42,7 @@ class SparseMatrixFrag{
 
         SparseMatrixFrag* chunk(int numChunks) {
             assert (this->n % numChunks == 0);
+            std::vector<SparseMatrixFrag> chunks;
             return this;
         }
 
@@ -53,7 +55,7 @@ class SparseMatrixFrag{
                 std::cout << this->colIdx[i] << " ";
             std::cout << std::endl;
 
-            for (int i=0; i<this->n; i++)
+            for (int i=0; i<this->n+1; i++)
                 std::cout << this->rowIdx[i] << " ";
             std::cout << std::endl;
         }
@@ -198,17 +200,28 @@ int main(int argc, char * argv[]) {
         SparseMatrixFrag A = SparseMatrixFrag(n, elems, values, rowIdx, colIdx);
         SparseMatrixFrag* chunks = A.chunk(numProcesses);
 
-        A.printout();
-
-        // TODO Distribute chunks over all processes
+        if(DEBUG)
+            A.printout(); 
+    }
+    
+    // Broadcast matrix size
+    MPI_Bcast(
+        &n,
+        1,
+        MPI_INT,
+        ROOT_PROCESS,
+        MPI_COMM_WORLD
+    );
+    
+    // TODO Distribute chunks over all processes
+    if (myRank == ROOT_PROCESS) {
+        
     } else {
-        // TODO receive fragment of matrix A
+
     }
 
     // TODO for simpicity, later pad with zeros
     assert(n % numProcesses == 0);
-
-    // TODO Root process broadcasts n
 
     // Generate fragment of dense matrix
     DenseMatrixFrag B = DenseMatrixFrag(n, myRank, numProcesses, seed);
