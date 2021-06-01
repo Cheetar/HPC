@@ -11,7 +11,7 @@ int main(int argc, char * argv[]) {
     int numProcesses, myRank, seed, c, e;
     bool g, verbose, inner;
     char* sparse_matrix_file; 
-    float g_val;
+    double g_val;
 
     MPI_Status *status;
 
@@ -36,15 +36,15 @@ int main(int argc, char * argv[]) {
     assert(strcmp(argv[7], "-e") == 0);
     e = atoi(argv[8]);
 
-    if ((argc >= 11) && (strcmp(argv[9], "-g"))) {
+    if ((argc >= 11) && (strcmp(argv[9], "-g") == 0)) {
         g = true;
         g_val = atof(argv[10]);
     }
 
     for (int i=9; i<argc; i++) {
-        if (strcmp(argv[i], "-v")) {
+        if (strcmp(argv[i], "-v") == 0) {
             verbose = true;
-        } else if (strcmp(argv[i], "-i")) {
+        } else if (strcmp(argv[i], "-i") == 0) {
             inner = true;
         }
     }
