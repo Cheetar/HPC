@@ -12,7 +12,7 @@ int main(int argc, char * argv[]) {
     bool g, verbose, inner;
     char* sparse_matrix_file; 
     float g_val;
-    
+
     MPI_Status *status;
 
     /* MPI initialization */
@@ -36,7 +36,7 @@ int main(int argc, char * argv[]) {
     assert(strcmp(argv[7], "-e") == 0);
     e = atoi(argv[8]);
 
-    if ((argc >= 10) && (strcmp(argv[9], "-g"))) {
+    if ((argc >= 11) && (strcmp(argv[9], "-g"))) {
         g = true;
         g_val = atof(argv[10]);
     }
@@ -54,7 +54,8 @@ int main(int argc, char * argv[]) {
               << "seed: " << seed << std::endl
               << "c: " << c << std::endl
               << "e: " << e << std::endl
-              << "g: " << g_val << std::endl
+              << "g: " << g << std::endl
+              << "g_val: " << g_val << std::endl
               << "v: " << verbose << std::endl
               << "i: " << inner << std::endl;
 
