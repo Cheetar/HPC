@@ -43,6 +43,20 @@ class SparseMatrixFrag{
             assert (this->n % numChunks == 0);
             return this;
         }
+
+        void printout() {
+            for (int i=0; i<this->numElems; i++)
+                std::cout << this->values[i] << " ";
+            std::cout << std::endl;
+
+            for (int i=0; i<this->numElems; i++)
+                std::cout << this->colIdx[i] << " ";
+            std::cout << std::endl;
+
+            for (int i=0; i<this->n; i++)
+                std::cout << this->rowIdx[i] << " ";
+            std::cout << std::endl;
+        }
 };
 
 int getFirstColIdxIncl(int myRank, int numProcesses, int n) {
@@ -183,6 +197,8 @@ int main(int argc, char * argv[]) {
 
         SparseMatrixFrag A = SparseMatrixFrag(n, elems, values, rowIdx, colIdx);
         SparseMatrixFrag* chunks = A.chunk(numProcesses);
+
+        A.printout();
 
         // TODO Distribute chunks over all processes
     } else {
