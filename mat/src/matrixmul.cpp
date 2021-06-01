@@ -234,7 +234,7 @@ int main(int argc, char * argv[]) {
 
         std::vector<SparseMatrixFrag> chunks = A.chunk(numProcesses);
         for(std::vector<SparseMatrixFrag>::iterator chunk = chunks.begin(); chunk != chunks.end(); ++chunk) {
-            *chunk.printout();
+            (*chunk).printout();
         } 
         
     }
