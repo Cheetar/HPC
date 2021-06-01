@@ -1,0 +1,26 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/home/cheetar/mimuw/HPC/mat/src/densematgen.cpp
+cstdint
+-
+densematgen.h
+/home/cheetar/mimuw/HPC/mat/src/densematgen.h
+
+/home/cheetar/mimuw/HPC/mat/src/densematgen.h
+
+/home/cheetar/mimuw/HPC/mat/src/matrixmul.cpp
+stdio.h
+-
+unistd.h
+-
+stdlib.h
+-
+time.h
+-
+

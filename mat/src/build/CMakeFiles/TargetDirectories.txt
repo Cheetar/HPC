@@ -1,0 +1,4 @@
+/home/cheetar/mimuw/HPC/mat/src/build/CMakeFiles/edit_cache.dir
+/home/cheetar/mimuw/HPC/mat/src/build/CMakeFiles/rebuild_cache.dir
+/home/cheetar/mimuw/HPC/mat/src/build/CMakeFiles/generator.dir
+/home/cheetar/mimuw/HPC/mat/src/build/CMakeFiles/matrixmul.dir
