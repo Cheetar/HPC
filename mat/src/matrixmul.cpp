@@ -16,9 +16,33 @@ const static int ROOT_PROCESS = 0;
 class SparseMatrixFrag{
     public:
         int n;
+        int numElems;
         int firstColIdxIncl;
         int lastColIdxExcl;
-        double* data;
+        double* values;
+        int* colIdx;
+        int* rowIdx;
+
+        SparseMatrixFrag(int n, int numElems, double* values, int* rowIdx, int* colIdx) {
+            this->n = n;
+            this->numElems = numElems;
+            this->values = values;
+            this->colIdx = colIdx;
+            this->rowIdx = rowIdx;
+            this->firstColIdxIncl = 0;
+            this->lastColIdxExcl = n;
+        }
+
+        ~SparseMatrixFrag() {
+            delete(this->values);
+            delete(this->colIdx);
+            delete(this->rowIdx);
+        }
+
+        SparseMatrixFrag* chunk(int numChunks) {
+            assert (this->n % numChunks == 0);
+            return this;
+        }
 };
 
 int getFirstColIdxIncl(int myRank, int numProcesses, int n) {
@@ -31,7 +55,7 @@ int getLastColIdxExcl(int myRank, int numProcesses, int n) {
 
 class DenseMatrixFrag{
     public:
-        int n;  // Matrix of size nxn
+        int n;  // Matrix of size n x n
         int firstColIdxIncl;
         int lastColIdxExcl;
         double* data;  // Data aligned by columns i.e. first n entries represent first column
@@ -49,6 +73,10 @@ class DenseMatrixFrag{
             }
         }
 
+        ~DenseMatrixFrag() {
+            delete(this->data);
+        }
+
         void printout() {
             for (int row=0; row<this->n; row++) {
                 for (int col = this->firstColIdxIncl; col<lastColIdxExcl; col++) {
@@ -59,6 +87,8 @@ class DenseMatrixFrag{
             }
         }
 };
+
+
 
 void multiply(SparseMatrixFrag& A, DenseMatrixFrag& B, DenseMatrixFrag& C) {
 
@@ -127,8 +157,7 @@ int main(int argc, char * argv[]) {
 
     // Root process reads and distributes sparse matrix A
     if (myRank == ROOT_PROCESS) {
-        /*
-        float tmp;
+        // Read matrix from file
         int elems, d;
         std::ifstream ReadFile(sparse_matrix_file);
 
@@ -137,41 +166,38 @@ int main(int argc, char * argv[]) {
         ReadFile >> elems;
         ReadFile >> d;
 
+        double* values = new double[elems];
+        int* rowIdx = new int[n + 1];
+        int* colIdx = new int[elems];
+        
+        for (int i=0; i<elems; i++)
+            ReadFile >> values[i];
 
-        std::cout << "n: " << n << std::endl
-                    << "elems: " << elems << std::endl
-                    << "d: " << d << std::endl;
+        for (int i=0; i<n+1; i++)
+            ReadFile >> rowIdx[i];
 
-        for (int i=0; i<elems; i++) {
-            ReadFile >> tmp;
-            std::cout << tmp << " ";
-        }
-
-        std::cout << std::endl;
-
-        for (int i=0; i<n+1; i++) {
-            ReadFile >> tmp;
-            std::cout << tmp << " ";
-        }
-
-        std::cout << std::endl;
-
-        for (int i=0; i<elems; i++) {
-            ReadFile >> tmp;
-            std::cout << tmp << " ";
-        }
+        for (int i=0; i<elems; i++)
+            ReadFile >> colIdx[i];
         
         ReadFile.close();
-        */
+
+        SparseMatrixFrag A = SparseMatrixFrag(n, elems, values, rowIdx, colIdx);
+        SparseMatrixFrag* chunks = A.chunk(numProcesses);
+
+        // TODO Distribute chunks over all processes
     } else {
         // TODO receive fragment of matrix A
     }
 
+    // TODO for simpicity, later pad with zeros
+    assert(n % numProcesses == 0);
+
     // TODO Root process broadcasts n
 
     // Generate fragment of dense matrix
-    DenseMatrixFrag denseFrag = DenseMatrixFrag(n, myRank, numProcesses, seed);
-    denseFrag.printout();
+    DenseMatrixFrag B = DenseMatrixFrag(n, myRank, numProcesses, seed);
+    if (DEBUG)
+        B.printout();
 
     MPI_Finalize(); /* mark that we've finished communicating */
     
