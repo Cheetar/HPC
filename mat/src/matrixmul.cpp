@@ -6,10 +6,15 @@
 #include <cassert>
 #include <string.h>
 #include <iostream>
+#include <fstream>
+
+const static bool DEBUG = true;
 
 int main(int argc, char * argv[]) {
     int numProcesses, myRank, seed, c, e;
-    bool g, verbose, inner;
+    bool g = false;
+    bool verbose = false;
+    bool inner = false;
     char* sparse_matrix_file; 
     double g_val;
 
@@ -49,15 +54,40 @@ int main(int argc, char * argv[]) {
         }
     }
 
-    std::cout << "Argc: " << argc << std::endl
-              << "sparse_matrix_file: " << sparse_matrix_file << std::endl
-              << "seed: " << seed << std::endl
-              << "c: " << c << std::endl
-              << "e: " << e << std::endl
-              << "g: " << g << std::endl
-              << "g_val: " << g_val << std::endl
-              << "v: " << verbose << std::endl
-              << "i: " << inner << std::endl;
+    // g and verbose parameters are exclusive
+    assert (!(g && verbose));
+
+    if (DEBUG) {
+        std::cout << "Argc: " << argc << std::endl
+                  << "sparse_matrix_file: " << sparse_matrix_file << std::endl
+                  << "seed: " << seed << std::endl
+                  << "c: " << c << std::endl
+                  << "e: " << e << std::endl
+                  << "g: " << g << std::endl
+                  << "g_val: " << g_val << std::endl
+                  << "v: " << verbose << std::endl
+                  << "i: " << inner << std::endl;
+    }
+
+    // Read sparse matrix A
+    float tmp;
+    int n, elems, d;
+    ifstream ReadFile(sparse_matrix_file);
+    
+    ReadFile >> n;
+    ReadFile >> n;  // A is a square matrix
+    ReadFile >> elems;
+    ReadFile >> d;
+
+    if (DEBUG) {
+        std::cout << "n: " << n << std::endl
+                  << "elems: " << elems << std::endl
+                  << "d: " << d << std::endl;
+    }
+
+    // Close the file
+    MyReadFile.close();
+
 
     MPI_Finalize(); /* mark that we've finished communicating */
     
