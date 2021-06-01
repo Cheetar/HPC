@@ -86,21 +86,21 @@ int main(int argc, char * argv[]) {
 
     for (int i=0; i<elems; i++) {
         ReadFile >> tmp;
-        cout << tmp << " ";
+        std::cout << tmp << " ";
     }
 
-    cout << std::endl;
+    std::cout << std::endl;
 
     for (int i=0; i<n; i++) {
         ReadFile >> tmp;
-        cout << tmp << " ";
+        std::cout << tmp << " ";
     }
 
-    cout << std::endl;
+    std::cout << std::endl;
 
     for (int i=0; i<n; i++) {
         ReadFile >> tmp;
-        cout << tmp << " ";
+        std::cout << tmp << " ";
     }
 
     ReadFile.close();
