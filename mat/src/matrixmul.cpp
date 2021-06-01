@@ -42,9 +42,9 @@ int main(int argc, char * argv[]) {
     }
 
     for (int i=10; i<argc; i++) {
-        if (strcmp(argv[i], '-v')) {
+        if (strcmp(argv[i], "-v")) {
             verbose = true;
-        } else if (strcmp(argv[i], '-i')) {
+        } else if (strcmp(argv[i], "-i")) {
             inner = true;
         }
     }
@@ -53,7 +53,7 @@ int main(int argc, char * argv[]) {
               << "sparse_matrix_file: " << sparse_matrix_file << std::endl
               << "seed: " << seed << std::endl
               << "c: " << c << std::endl
-              << "e: " << e << std::endl;
+              << "e: " << e << std::endl
               << "g: " << g_val << std::endl
               << "v: " << verbose << std::endl
               << "i: " << inner << std::endl;
