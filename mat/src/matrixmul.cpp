@@ -15,7 +15,8 @@ int main(int argc, char * argv[]) {
     /* Read program arguments */
     // matrixmul -f sparse_matrix_file -s seed_for_dense_matrix -c repl_group_size -e exponent [-g ge_value] [-v] [-i]
 
-    printf("Hello world from process %d\n", myRank);
+    //printf("Hello world from process %d\n", myRank);
+    printf("argc = %d\n", argc);
 
     MPI_Finalize(); /* mark that we've finished communicating */
     
