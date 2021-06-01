@@ -9,6 +9,11 @@ add_executable(generator
         densematgen.h
         generator_main.cpp)
 
+add_executable(matrixmul
+        densematgen.cpp
+        densematgen.h
+        matrixmul.cpp)
+
 # add_executable(generator_all
 #         densematgen.cpp
 #         densematgen.h
