@@ -9,7 +9,8 @@
 
 int main(int argc, char * argv[]) {
     int numProcesses, myRank;
-    int seed, c, e;
+    int seed, c, e, g_val;
+    bool g, verbose, inner;
     char* sparse_matrix_file; 
     MPI_Status *status;
 
@@ -32,13 +33,30 @@ int main(int argc, char * argv[]) {
     c = atoi(argv[6]);
 
     assert(strcmp(argv[7], "-e") == 0);
-    e = atoi(argv[2]);
+    e = atoi(argv[8]);
+
+    if ((argc >= 10) && (strcmp(argv[10], "-g"))) {
+        assert(argc >= 11);
+        g = true;
+        g_val = atoi(argv[11]);
+    }
+
+    for (int i=10; i<argc; i++) {
+        if (strcmp(argv[i], '-v')) {
+            verbose = true;
+        } else if (strcmp(argv[i], '-i')) {
+            inner = true;
+        }
+    }
 
     std::cout << "Argc: " << argc << std::endl
               << "sparse_matrix_file: " << sparse_matrix_file << std::endl
               << "seed: " << seed << std::endl
-              << "c: " << std::endl
+              << "c: " << c << std::endl
               << "e: " << e << std::endl;
+              << "g: " << g_val << std::endl
+              << "v: " << verbose << std::endl
+              << "i: " << inner << std::endl;
 
     MPI_Finalize(); /* mark that we've finished communicating */
     
