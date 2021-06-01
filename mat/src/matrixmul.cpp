@@ -7,11 +7,66 @@
 #include <string.h>
 #include <iostream>
 #include <fstream>
+#include "densematgen.h"
 
 const static bool DEBUG = true;
+const static int ROOT_PROCESS = 0;
+
+
+class SparseMatrixFrag{
+    public:
+        int n;
+        int firstColIdxIncl;
+        int lastColIdxExcl;
+        double* data;
+};
+
+int getFirstColIdxIncl(int myRank, int numProcesses, int n) {
+    return myRank * n/numProcesses;
+}
+
+int getLastColIdxExcl(int myRank, int numProcesses, int n) {
+    return getFirstColIdxIncl(myRank + 1, numProcesses, n);
+}
+
+class DenseMatrixFrag{
+    public:
+        int n;  // Matrix of size nxn
+        int firstColIdxIncl;
+        int lastColIdxExcl;
+        double* data;  // Data aligned by columns i.e. first n entries represent first column
+
+        DenseMatrixFrag(int n, int myRank, int numProcesses, int seed) {
+            this->n = n;
+            this->firstColIdxIncl = getFirstColIdxIncl(myRank, numProcesses, n);
+            this->lastColIdxExcl = getLastColIdxExcl(myRank, numProcesses, n);
+            this->data = new double[n*n/numProcesses];
+            for (int global_col=this->firstColIdxIncl; global_col<this->lastColIdxExcl; global_col++) {
+                for (int row=0; row<n; row++) {
+                    int local_col = global_col - this->firstColIdxIncl;
+                    this->data[local_col*n + row] = generate_double(seed, row, global_col);
+                }
+            }
+        }
+
+        void printout() {
+            for (int row=0; row<this->n; row++) {
+                for (int col = this->firstColIdxIncl; col<lastColIdxExcl; col++) {
+                    int local_col = col - this->firstColIdxIncl;
+                    std::cout << data[local_col*n + row] << " ";
+                }
+                std::cout << std::endl;
+            }
+        }
+};
+
+void multiply(SparseMatrixFrag& A, DenseMatrixFrag& B, DenseMatrixFrag& C) {
+
+}
+
 
 int main(int argc, char * argv[]) {
-    int numProcesses, myRank, seed, c, e;
+    int numProcesses, myRank, seed, c, e, n;
     bool g = false;
     bool verbose = false;
     bool inner = false;
@@ -53,9 +108,8 @@ int main(int argc, char * argv[]) {
             inner = true;
         }
     }
-
-    // g and verbose parameters are exclusive
-    assert (!(g && verbose));
+    
+    assert (!(g && verbose));  // g and verbose parameters are exclusive
 
     if (DEBUG) {
         std::cout << "Argc: " << argc << std::endl
@@ -69,41 +123,55 @@ int main(int argc, char * argv[]) {
                   << "i: " << inner << std::endl;
     }
 
-    // Read sparse matrix A
-    float tmp;
-    int n, elems, d;
-    std::ifstream ReadFile(sparse_matrix_file);
+    n = 12;
 
-    ReadFile >> n;
-    ReadFile >> n;  // A is a square matrix
-    ReadFile >> elems;
-    ReadFile >> d;
+    // Root process reads and distributes sparse matrix A
+    if (myRank == ROOT_PROCESS) {
+        /*
+        float tmp;
+        int elems, d;
+        std::ifstream ReadFile(sparse_matrix_file);
+
+        ReadFile >> n;
+        ReadFile >> n;  // A is a square matrix
+        ReadFile >> elems;
+        ReadFile >> d;
 
 
-    std::cout << "n: " << n << std::endl
-                << "elems: " << elems << std::endl
-                << "d: " << d << std::endl;
+        std::cout << "n: " << n << std::endl
+                    << "elems: " << elems << std::endl
+                    << "d: " << d << std::endl;
 
-    for (int i=0; i<elems; i++) {
-        ReadFile >> tmp;
-        std::cout << tmp << " ";
+        for (int i=0; i<elems; i++) {
+            ReadFile >> tmp;
+            std::cout << tmp << " ";
+        }
+
+        std::cout << std::endl;
+
+        for (int i=0; i<n+1; i++) {
+            ReadFile >> tmp;
+            std::cout << tmp << " ";
+        }
+
+        std::cout << std::endl;
+
+        for (int i=0; i<elems; i++) {
+            ReadFile >> tmp;
+            std::cout << tmp << " ";
+        }
+        
+        ReadFile.close();
+        */
+    } else {
+        // TODO receive fragment of matrix A
     }
 
-    std::cout << std::endl;
+    // TODO Root process broadcasts n
 
-    for (int i=0; i<n; i++) {
-        ReadFile >> tmp;
-        std::cout << tmp << " ";
-    }
-
-    std::cout << std::endl;
-
-    for (int i=0; i<n; i++) {
-        ReadFile >> tmp;
-        std::cout << tmp << " ";
-    }
-
-    ReadFile.close();
+    // Generate fragment of dense matrix
+    DenseMatrixFrag denseFrag = DenseMatrixFrag(n, myRank, numProcesses, seed);
+    denseFrag.printout();
 
     MPI_Finalize(); /* mark that we've finished communicating */
     
