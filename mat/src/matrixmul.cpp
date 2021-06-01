@@ -8,10 +8,11 @@
 #include <iostream>
 
 int main(int argc, char * argv[]) {
-    int numProcesses, myRank;
-    int seed, c, e, g_val;
+    int numProcesses, myRank, seed, c, e;
     bool g, verbose, inner;
     char* sparse_matrix_file; 
+    float g_val;
+    
     MPI_Status *status;
 
     /* MPI initialization */
@@ -35,13 +36,12 @@ int main(int argc, char * argv[]) {
     assert(strcmp(argv[7], "-e") == 0);
     e = atoi(argv[8]);
 
-    if ((argc >= 10) && (strcmp(argv[10], "-g"))) {
-        assert(argc >= 11);
+    if ((argc >= 10) && (strcmp(argv[9], "-g"))) {
         g = true;
-        g_val = atoi(argv[11]);
+        g_val = atof(argv[10]);
     }
 
-    for (int i=10; i<argc; i++) {
+    for (int i=9; i<argc; i++) {
         if (strcmp(argv[i], "-v")) {
             verbose = true;
         } else if (strcmp(argv[i], "-i")) {
