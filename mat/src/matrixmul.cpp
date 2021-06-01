@@ -14,6 +14,15 @@ const static bool DEBUG = true;
 const static int ROOT_PROCESS = 0;
 
 
+int getFirstColIdxIncl(int myRank, int numProcesses, int n) {
+    return myRank * n/numProcesses;
+}
+
+int getLastColIdxExcl(int myRank, int numProcesses, int n) {
+    return getFirstColIdxIncl(myRank + 1, numProcesses, n);
+}
+
+
 class SparseMatrixFrag{
     public:
         int n;
@@ -24,26 +33,57 @@ class SparseMatrixFrag{
         int* colIdx;
         int* rowIdx;
 
-        SparseMatrixFrag(int n, int numElems, double* values, int* rowIdx, int* colIdx) {
+        SparseMatrixFrag(int n, int numElems, double* values, int* rowIdx, int* colIdx, int firstColIdxIncl, int lastColIdxExcl) {
             this->n = n;
             this->numElems = numElems;
             this->values = values;
             this->colIdx = colIdx;
             this->rowIdx = rowIdx;
-            this->firstColIdxIncl = 0;
-            this->lastColIdxExcl = n;
+            this->firstColIdxIncl = firstColIdxIncl;
+            this->lastColIdxExcl = lastColIdxExcl;
         }
 
         ~SparseMatrixFrag() {
             delete(this->values);
-            delete(this->colIdx);
             delete(this->rowIdx);
+            delete(this->colIdx);
         }
 
-        SparseMatrixFrag* chunk(int numChunks) {
+        std::vector<SparseMatrixFrag> chunk(int numChunks) {
             assert (this->n % numChunks == 0);
             std::vector<SparseMatrixFrag> chunks;
-            return this;
+            for (int chunkId=0; chunkId<numChunks; chunkId++) {
+                int firstColIdxIncl = getFirstColIdxIncl(chunkId, numChunks, this->n);
+                int lastColIdxExcl = getLastColIdxExcl(chunkId, numChunks, this->n);
+                std::vector<double> chunkValues;
+                std::vector<int> chunkColIdx;
+                std::vector<int> chunkRowIdx;
+                int numElementsInChunk = 0;
+                chunkRowIdx.push_back(0);
+                for (int row=0; row<n; row++) {
+                    int idx = this->rowIdx[row];
+                    int nextIdx = this->rowIdx[row+1];
+                    for (int i=idx; i<nextIdx; i++) {
+                        if ((this->colIdx[i] >= firstColIdxIncl) && (this->colIdx[i] < lastColIdxExcl)) {
+                            numElementsInChunk++;
+                            chunkValues.push_back(this->values[i]);
+                            chunkColIdx.push_back(this->colIdx[i]);
+                        }
+                    }
+                    chunkRowIdx.push_back(numElementsInChunk);
+                }
+
+                double* values = new double[numElementsInChunk];
+                int* rowIdx = new int[n + 1];
+                int* colIdx = new int[numElementsInChunk];
+                std::copy(chunkValues.begin(), chunkValues.end(), values);
+                std::copy(chunkRowIdx.begin(), chunkRowIdx.end(), rowIdx);
+                std::copy(chunkColIdx.begin(), chunkColIdx.end(), colIdx);
+            
+                SparseMatrixFrag chunk = SparseMatrixFrag(this->n, numElementsInChunk, values, rowIdx, colIdx, firstColIdxIncl, lastColIdxExcl);
+                chunks.push_back(chunk);
+            }
+            return chunks;
         }
 
         void printout() {
@@ -61,13 +101,6 @@ class SparseMatrixFrag{
         }
 };
 
-int getFirstColIdxIncl(int myRank, int numProcesses, int n) {
-    return myRank * n/numProcesses;
-}
-
-int getLastColIdxExcl(int myRank, int numProcesses, int n) {
-    return getFirstColIdxIncl(myRank + 1, numProcesses, n);
-}
 
 class DenseMatrixFrag{
     public:
@@ -169,8 +202,6 @@ int main(int argc, char * argv[]) {
                   << "i: " << inner << std::endl;
     }
 
-    n = 12;
-
     // Root process reads and distributes sparse matrix A
     if (myRank == ROOT_PROCESS) {
         // Read matrix from file
@@ -197,10 +228,9 @@ int main(int argc, char * argv[]) {
         
         ReadFile.close();
 
-        SparseMatrixFrag A = SparseMatrixFrag(n, elems, values, rowIdx, colIdx);
-        SparseMatrixFrag* chunks = A.chunk(numProcesses);
+        SparseMatrixFrag A = SparseMatrixFrag(n, elems, values, rowIdx, colIdx, 0, n);
 
-        if(DEBUG)
+        if (DEBUG)
             A.printout(); 
     }
     
@@ -215,7 +245,10 @@ int main(int argc, char * argv[]) {
     
     // TODO Distribute chunks over all processes
     if (myRank == ROOT_PROCESS) {
-        
+        std::vector<SparseMatrixFrag> chunks = A.chunk(numProcesses);
+        for(std::vector<SparseMatrixFrag>::iterator chunk = chunks.begin(); chunk != chunks.end(); ++chunk) {
+            it.printout();
+        } 
     } else {
 
     }
@@ -225,8 +258,8 @@ int main(int argc, char * argv[]) {
 
     // Generate fragment of dense matrix
     DenseMatrixFrag B = DenseMatrixFrag(n, myRank, numProcesses, seed);
-    if (DEBUG)
-        B.printout();
+    /*if (DEBUG)
+        B.printout();*/
 
     MPI_Finalize(); /* mark that we've finished communicating */
     
