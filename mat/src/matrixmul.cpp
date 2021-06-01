@@ -72,22 +72,38 @@ int main(int argc, char * argv[]) {
     // Read sparse matrix A
     float tmp;
     int n, elems, d;
-    ifstream ReadFile(sparse_matrix_file);
-    
+    std::ifstream ReadFile(sparse_matrix_file);
+
     ReadFile >> n;
     ReadFile >> n;  // A is a square matrix
     ReadFile >> elems;
     ReadFile >> d;
 
-    if (DEBUG) {
-        std::cout << "n: " << n << std::endl
-                  << "elems: " << elems << std::endl
-                  << "d: " << d << std::endl;
+
+    std::cout << "n: " << n << std::endl
+                << "elems: " << elems << std::endl
+                << "d: " << d << std::endl;
+
+    for (int i=0; i<elems; i++) {
+        ReadFile >> tmp;
+        cout << tmp << " ";
     }
 
-    // Close the file
-    MyReadFile.close();
+    cout << std::endl;
 
+    for (int i=0; i<n; i++) {
+        ReadFile >> tmp;
+        cout << tmp << " ";
+    }
+
+    cout << std::endl;
+
+    for (int i=0; i<n; i++) {
+        ReadFile >> tmp;
+        cout << tmp << " ";
+    }
+
+    ReadFile.close();
 
     MPI_Finalize(); /* mark that we've finished communicating */
     
