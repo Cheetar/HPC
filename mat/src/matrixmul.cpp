@@ -229,9 +229,14 @@ int main(int argc, char * argv[]) {
         ReadFile.close();
 
         SparseMatrixFrag A = SparseMatrixFrag(n, elems, values, rowIdx, colIdx, 0, n);
-
         if (DEBUG)
             A.printout(); 
+
+        std::vector<SparseMatrixFrag> chunks = A.chunk(numProcesses);
+        for(std::vector<SparseMatrixFrag>::iterator chunk = chunks.begin(); chunk != chunks.end(); ++chunk) {
+            it.printout();
+        } 
+        
     }
     
     // Broadcast matrix size
@@ -245,10 +250,7 @@ int main(int argc, char * argv[]) {
     
     // TODO Distribute chunks over all processes
     if (myRank == ROOT_PROCESS) {
-        std::vector<SparseMatrixFrag> chunks = A.chunk(numProcesses);
-        for(std::vector<SparseMatrixFrag>::iterator chunk = chunks.begin(); chunk != chunks.end(); ++chunk) {
-            it.printout();
-        } 
+        
     } else {
 
     }
