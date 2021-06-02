@@ -460,9 +460,6 @@ int main(int argc, char * argv[]) {
         A = new SparseMatrixFrag(n, chunkNumElems, values, rowIdx, colIdx, firstColIdxIncl, lastColIdxExcl);
     }
 
-    std::cout << "myRank: " << myRank << std::endl;
-    A->printout();
-
     // TODO for simpicity, later pad with zeros
     assert(n % numProcesses == 0);
 
@@ -476,14 +473,17 @@ int main(int argc, char * argv[]) {
         DenseMatrixFrag* C = new DenseMatrixFrag(n, myRank, numProcesses, 0);  // seed is 0, so matrix is all zeros
         for (int round=1; round<=numProcesses; round++) {
             multiplyColA(A, B, C);
+            if (myRank == ROOT_PROCESS) {
+                A->printout();
+                B->printout();
+            }
             shiftColA(A, myRank, numProcesses, round);
-            std::cout << "myRank: " << myRank << std::endl;
-            A->printout();
         }
         delete(B);
         B = C;
     }
-    B->printout();
+    if (myRank == ROOT_PROCESS)
+        B->printout();
     // DenseMatrixFrag* whole_C  = gatherResult(C);
     // whole_C->printout();
 
