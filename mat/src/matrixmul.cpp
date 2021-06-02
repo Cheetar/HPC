@@ -265,7 +265,7 @@ int main(int argc, char * argv[]) {
             MPI_Send(
                 chunk->values,
                 chunkNumElems,
-                MPI_INT,
+                MPI_DOUBLE,
                 processNum,
                 TAG,
                 MPI_COMM_WORLD
@@ -312,7 +312,7 @@ int main(int argc, char * argv[]) {
         MPI_Recv(
             A->values,
             chunkNumElems,
-            MPI_INT,
+            MPI_DOUBLE,
             ROOT_PROCESS,
             TAG,
             MPI_COMM_WORLD,
