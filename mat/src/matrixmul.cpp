@@ -299,7 +299,7 @@ int main(int argc, char * argv[]) {
             &chunkNumElems,
             1,
             MPI_INT,
-            processNum,
+            ROOT_PROCESS,
             TAG,
             MPI_COMM_WORLD,
             status
