@@ -96,6 +96,20 @@ class SparseMatrixFrag{
 
                 std::cout << "im here" << std::endl;
 
+                for(int i=0; i<numElementsInChunk; ++i)
+                    std::cout << values[i] << ' ';
+                std::cout << std::endl;
+
+                for(int i=0; i<numElementsInChunk; ++i)
+                    std::cout << colIdx[i] << ' ';
+                std::cout << std::endl;
+
+                for(int i=0; i<n+1; ++i)
+                    std::cout << rowIdx[i] << ' ';
+                std::cout << std::endl;
+
+                std::cout << "im here" << std::endl;
+
                 SparseMatrixFrag chunk = SparseMatrixFrag(this->n, numElementsInChunk, values, rowIdx, colIdx, firstColIdxIncl, lastColIdxExcl);
                 chunks.push_back(chunk);
             }
