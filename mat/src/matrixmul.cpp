@@ -232,21 +232,22 @@ int main(int argc, char * argv[]) {
             A.printout(); 
 
         std::vector<SparseMatrixFrag*> chunks = A.chunk(numProcesses);
-        for(std::vector<SparseMatrixFrag*>::iterator chunk = chunks.begin(); chunk != chunks.end(); ++chunk) {
-            (*chunk)->printout();
+        for(std::vector<SparseMatrixFrag*>::iterator it = chunks.begin(); it != chunks.end(); ++it) {
+            SparseMatrixFrag* chunk = *it; 
         }
-        
     }
     
     // Broadcast matrix size
-    /*MPI_Bcast(
+    MPI_Bcast(
         &n,
         1,
         MPI_INT,
         ROOT_PROCESS,
         MPI_COMM_WORLD
-    );*/
+    );
     
+    std::cout << "n: " << n << std::endl;
+
     // TODO Distribute chunks over all processes
     if (myRank == ROOT_PROCESS) {
         
