@@ -232,7 +232,7 @@ int main(int argc, char * argv[]) {
 
         whole_A = new SparseMatrixFrag(n, elems, values, rowIdx, colIdx, 0, n);
         if (DEBUG)
-            whole_A.printout();   
+            whole_A->printout();   
     } 
 
     // Broadcast matrix size
@@ -250,7 +250,7 @@ int main(int argc, char * argv[]) {
         for (int processNum=1; processNum<numProcesses; processNum++){
             SparseMatrixFrag* chunk = chunks[processNum];
             int chunkNumElems = chunk->numElems;
-            
+
             // Send number of elements in a chunk 
             MPI_Send(
                 &chunkNumElems,
