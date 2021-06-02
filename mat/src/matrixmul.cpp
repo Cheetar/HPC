@@ -244,11 +244,12 @@ int main(int argc, char * argv[]) {
         MPI_COMM_WORLD
     );
 
-    int buffer[100];
+    int buffer_send[100];
+    int buffer_recv[100];
 
     if (myRank == ROOT_PROCESS)
         MPI_Send(
-            buffer,
+            buffer_send,
             100,
             MPI_INT,
             1,
@@ -257,9 +258,9 @@ int main(int argc, char * argv[]) {
         );
     else
         MPI_Recv(
-            buffer,
+            buffer_recv,
             100,
-            MPI_DOUBLE,
+            MPI_INT,
             ROOT_PROCESS,
             TAG,
             MPI_COMM_WORLD,
