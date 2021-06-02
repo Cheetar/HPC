@@ -286,6 +286,8 @@ int main(int argc, char * argv[]) {
                 TAG,
                 MPI_COMM_WORLD
             );
+
+            std::cout << "Finished sending to process " << processNum << std::endl;
         }
 
         // Initialize chunk of ROOT process
