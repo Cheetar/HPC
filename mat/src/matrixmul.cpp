@@ -168,7 +168,7 @@ int main(int argc, char * argv[]) {
 
     /* Read program arguments */
     // Format: matrixmul -f sparse_matrix_file -s seed_for_dense_matrix -c repl_group_size -e exponent [-g ge_value] [-v] [-i]
-    /*assert((9 <= argc) && (argc <= 13));
+    assert((9 <= argc) && (argc <= 13));
 
     assert(strcmp(argv[1], "-f") == 0);
     sparse_matrix_file = argv[2];
@@ -227,7 +227,7 @@ int main(int argc, char * argv[]) {
         if (DEBUG)
             whole_A->printout();   
     } 
-*/
+
     // Broadcast matrix size
     MPI_Bcast(
         &n,
