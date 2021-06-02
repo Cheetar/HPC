@@ -177,12 +177,14 @@ void multiplyColA(SparseMatrixFrag* A, DenseMatrixFrag* B, DenseMatrixFrag* C) {
 }
 
 void shiftColA(SparseMatrixFrag* A, int myRank, int numProcesses, int round) {
+    
+    int prevProcessNo = myRank > 0 ? myRank - 1 : numProcesses - 1;
+    int nextProcessNo = myRank < numProcesses - 1 ? myRank + 1 : 0;
+    int n = A->n;
+
     MPI_Request requests[8];
     MPI_Status statuses[8];
 
-    int prevProcessNo = myProcessNo > 0 ? myProcessNo - 1 : numProcesses - 1;
-    int nextProcessNo = myProcessNo < numProcesses - 1 ? myProcessNo + 1 : 0;
-    int n = A->n;
     MPI_Isend(
         &A->numElems,
         1,
@@ -269,9 +271,9 @@ void shiftColA(SparseMatrixFrag* A, int myRank, int numProcesses, int round) {
 
     // Replace chunk of data
     delete A;
-    int firstColIdxIncl = getFirstColIdxIncl(myRank, numProcesses, n, round)
+    int firstColIdxIncl = getFirstColIdxIncl(myRank, numProcesses, n, round);
     int lastColIdxExcl = getLastColIdxExcl(myRank, numProcesses, n, round);
-    A = new SparseMatrixFrag(int n, chunkNumElems, values, rowIdx, colIdx, firstColIdxIncl, lastColIdxExcl);
+    A = new SparseMatrixFrag(n, chunkNumElems, values, rowIdx, colIdx, firstColIdxIncl, lastColIdxExcl);
 }
 
 int main(int argc, char * argv[]) {
@@ -472,8 +474,8 @@ int main(int argc, char * argv[]) {
     // ColA algorithm
     DenseMatrixFrag* C = new DenseMatrixFrag(n, myRank, numProcesses, 0);  // seed is 0, so matrix is all zeros
     for (int round=1; round<=numProcesses; round++) {
-        multiplyColA(A, B. C);
-        shiftColA(A, round);
+        multiplyColA(A, B, C);
+        shiftColA(A, myRank, numProcesses, round);
     }
     C->printout();
     // DenseMatrixFrag* whole_C  = gatherResult(C);
