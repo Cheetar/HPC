@@ -472,9 +472,9 @@ int main(int argc, char * argv[]) {
     for (int iteration = 0; iteration < e; iteration++) {
         DenseMatrixFrag* C = new DenseMatrixFrag(n, myRank, numProcesses, 0);  // seed is 0, so matrix is all zeros
         for (int round=1; round<=numProcesses; round++) {
-            std::cout << "round " << round << std::endl;
             multiplyColA(A, B, C);
             if (myRank == ROOT_PROCESS) {
+                std::cout << "round " << round << std::endl;
                 std::cout << "A: " << std::endl;
                 A->printout();
                 std::cout << "B: " << std::endl;
