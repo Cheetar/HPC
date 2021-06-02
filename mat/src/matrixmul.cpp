@@ -55,8 +55,8 @@ class SparseMatrixFrag{
             for (int chunkId=0; chunkId<numChunks; chunkId++) {
                 int firstColIdxIncl = getFirstColIdxIncl(chunkId, numChunks, this->n);
                 int lastColIdxExcl = getLastColIdxExcl(chunkId, numChunks, this->n);
-                std::cout << "firstColIdxIncl: " << firstColIdxIncl << std::endl;
-                std::cout << "lastColIdxExcl: " << lastColIdxExcl << std::endl;
+                //std::cout << "firstColIdxIncl: " << firstColIdxIncl << std::endl;
+                //std::cout << "lastColIdxExcl: " << lastColIdxExcl << std::endl;
                 std::vector<double> chunkValues;
                 std::vector<int> chunkColIdx;
                 std::vector<int> chunkRowIdx;
@@ -82,6 +82,18 @@ class SparseMatrixFrag{
                 std::copy(chunkRowIdx.begin(), chunkRowIdx.end(), rowIdx);
                 std::copy(chunkColIdx.begin(), chunkColIdx.end(), colIdx);
             
+                for(int i=0; i<chunkValues.size(); ++i)
+                    std::cout << chunkValues[i] << ' ';
+                std::cout << std::endl;
+
+                for(int i=0; i<chunkColIdx.size(); ++i)
+                    std::cout << chunkColIdx[i] << ' ';
+                std::cout << std::endl;
+
+                for(int i=0; i<chunkRowIdx.size(); ++i)
+                    std::cout << chunkRowIdx[i] << ' ';
+                std::cout << std::endl;
+
                 SparseMatrixFrag chunk = SparseMatrixFrag(this->n, numElementsInChunk, values, rowIdx, colIdx, firstColIdxIncl, lastColIdxExcl);
                 chunks.push_back(chunk);
             }
