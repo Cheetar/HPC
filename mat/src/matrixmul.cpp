@@ -309,6 +309,8 @@ int main(int argc, char * argv[]) {
         int* rowIdx = new int[n + 1];
         int* colIdx = new int[chunkNumElems];
 
+        std::cout << "arrays initialized" << std::endl;
+
         MPI_Recv(
             values,
             chunkNumElems,
