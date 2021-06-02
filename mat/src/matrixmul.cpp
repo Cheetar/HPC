@@ -301,7 +301,8 @@ int main(int argc, char * argv[]) {
             MPI_INT,
             processNum,
             TAG,
-            MPI_COMM_WORLD
+            MPI_COMM_WORLD,
+            status
         );
         double* values = new double[chunkNumElems];
         int* rowIdx = new int[n + 1];
@@ -317,7 +318,8 @@ int main(int argc, char * argv[]) {
             MPI_INT,
             ROOT_PROCESS,
             TAG,
-            MPI_COMM_WORLD
+            MPI_COMM_WORLD,
+            status
         );
         MPI_Recv(
             A->rowIdx,
@@ -325,7 +327,8 @@ int main(int argc, char * argv[]) {
             MPI_INT,
             ROOT_PROCESS,
             TAG,
-            MPI_COMM_WORLD
+            MPI_COMM_WORLD,
+            status
         );
         MPI_Recv(
             A->colIdx,
@@ -333,7 +336,8 @@ int main(int argc, char * argv[]) {
             MPI_INT,
             ROOT_PROCESS,
             TAG,
-            MPI_COMM_WORLD
+            MPI_COMM_WORLD,
+            status
         ); 
     }
 
