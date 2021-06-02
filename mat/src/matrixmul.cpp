@@ -49,9 +49,9 @@ class SparseMatrixFrag{
             delete(this->colIdx);
         }
 
-        std::vector<SparseMatrixFrag> chunk(int numChunks) {
+        std::vector<SparseMatrixFrag*> chunk(int numChunks) {
             assert (this->n % numChunks == 0);
-            std::vector<SparseMatrixFrag> chunks;
+            std::vector<SparseMatrixFrag*> chunks;
             for (int chunkId=0; chunkId<numChunks; chunkId++) {
                 int firstColIdxIncl = getFirstColIdxIncl(chunkId, numChunks, this->n);
                 int lastColIdxExcl = getLastColIdxExcl(chunkId, numChunks, this->n);
@@ -111,8 +111,8 @@ class SparseMatrixFrag{
 
                 std::cout << "im here" << std::endl;
 
-                SparseMatrixFrag chunk = SparseMatrixFrag(this->n, numElementsInChunk, values, rowIdx, colIdx, firstColIdxIncl, lastColIdxExcl);
-                chunk.printout();
+                SparseMatrixFrag *chunk = new SparseMatrixFrag(this->n, numElementsInChunk, values, rowIdx, colIdx, firstColIdxIncl, lastColIdxExcl);
+                (*chunk).printout();
                 chunks.push_back(chunk);
             }
             return chunks;
@@ -123,13 +123,13 @@ class SparseMatrixFrag{
                 std::cout << this->values[i] << " ";
             std::cout << std::endl;
 
-            for (int i=0; i<this->numElems; i++)
-                std::cout << this->colIdx[i] << " ";
-            std::cout << std::endl;
-
             for (int i=0; i<this->n+1; i++)
                 std::cout << this->rowIdx[i] << " ";
             std::cout << std::endl;
+
+            for (int i=0; i<this->numElems; i++)
+                std::cout << this->colIdx[i] << " ";
+            std::cout << std::endl;   
         }
 };
 
@@ -263,9 +263,9 @@ int main(int argc, char * argv[]) {
         if (DEBUG)
             A.printout(); 
 
-        std::vector<SparseMatrixFrag> chunks = A.chunk(numProcesses);
-        chunks[0].printout();
-        chunks[1].printout();
+        std::vector<SparseMatrixFrag*> chunks = A.chunk(numProcesses);
+        (*chunks[0]).printout();
+        (*chunks[1]).printout();
         /*for(std::vector<SparseMatrixFrag>::iterator chunk = chunks.begin(); chunk != chunks.end(); ++chunk) {
             (*chunk).printout();
         } */
