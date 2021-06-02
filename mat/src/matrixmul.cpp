@@ -75,9 +75,9 @@ class SparseMatrixFrag{
                     chunkRowIdx.push_back(numElementsInChunk);
                 }
 
-                double* values = new double[numElementsInChunk];
-                int* rowIdx = new int[n + 1];
-                int* colIdx = new int[numElementsInChunk];
+                double* values = (double*)malloc(sizeof(double) * numElementsInChunk);
+                int* rowIdx = (int*)malloc(sizeof(int) * (n+1));
+                int* colIdx = (int*)malloc(sizeof(int) * numElementsInChunk);
                 std::copy(chunkValues.begin(), chunkValues.end(), values);
                 std::copy(chunkRowIdx.begin(), chunkRowIdx.end(), rowIdx);
                 std::copy(chunkColIdx.begin(), chunkColIdx.end(), colIdx);
