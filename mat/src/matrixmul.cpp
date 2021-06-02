@@ -271,13 +271,13 @@ int main(int argc, char * argv[]) {
     }
     
     // Broadcast matrix size
-    MPI_Bcast(
+    /*MPI_Bcast(
         &n,
         1,
         MPI_INT,
         ROOT_PROCESS,
         MPI_COMM_WORLD
-    );
+    );*/
     
     // TODO Distribute chunks over all processes
     if (myRank == ROOT_PROCESS) {
