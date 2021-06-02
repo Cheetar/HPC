@@ -34,8 +34,6 @@ class SparseMatrixFrag{
         int* rowIdx;
         int* colIdx;
 
-        SparseMatrixFrag() {}
-
         SparseMatrixFrag(int n, int numElems, double* values, int* rowIdx, int* colIdx, int firstColIdxIncl, int lastColIdxExcl) {
             this->n = n;
             this->numElems = numElems;
@@ -156,7 +154,7 @@ int main(int argc, char * argv[]) {
     double g_val;
 
     MPI_Status *status;
-    SparseMatrixFrag whole_A;
+    SparseMatrixFrag* whole_A;
     SparseMatrixFrag* A;
 
     /* MPI initialization */
@@ -232,7 +230,7 @@ int main(int argc, char * argv[]) {
         
         ReadFile.close();
 
-        whole_A = SparseMatrixFrag(n, elems, values, rowIdx, colIdx, 0, n);
+        whole_A = new SparseMatrixFrag(n, elems, values, rowIdx, colIdx, 0, n);
         if (DEBUG)
             whole_A.printout();   
     } 
@@ -248,10 +246,11 @@ int main(int argc, char * argv[]) {
 
     // Distribute chunks of A over all processes
     if (myRank == ROOT_PROCESS) {
-        std::vector<SparseMatrixFrag*> chunks = whole_A.chunk(numProcesses);
+        std::vector<SparseMatrixFrag*> chunks = whole_A->chunk(numProcesses);
         for (int processNum=1; processNum<numProcesses; processNum++){
             SparseMatrixFrag* chunk = chunks[processNum];
             int chunkNumElems = chunk->numElems;
+            
             // Send number of elements in a chunk 
             MPI_Send(
                 &chunkNumElems,
