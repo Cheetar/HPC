@@ -361,7 +361,7 @@ int main(int argc, char * argv[]) {
     assert(n % numProcesses == 0);
 
     // Generate fragment of dense matrix
-    DenseMatrixFrag B = DenseMatrixFrag(n, myRank, numProcesses, seed);
+    DenseMatrixFrag* B = new DenseMatrixFrag(n, myRank, numProcesses, seed);
     /*if (DEBUG)
         B.printout();*/
 
