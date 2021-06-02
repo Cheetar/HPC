@@ -128,13 +128,13 @@ class DenseMatrixFrag{
         }
 
         void add(int row, int col, double val) {
-            assert(col >= this->firstColIdxIncl && col < this->lastColIdxEx);
+            assert(col >= this->firstColIdxIncl && col < this->lastColIdxExcl);
             int local_col = col - this->firstColIdxIncl;
             this->data[local_col*this->n + row] += val;
         }
 
         double get(int row, int col) {
-            assert(col >= this->firstColIdxIncl && col < this->lastColIdxEx);
+            assert(col >= this->firstColIdxIncl && col < this->lastColIdxExcl);
             int local_col = col - this->firstColIdxIncl;
             return this->data[local_col*this->n + row];
         }
@@ -157,7 +157,7 @@ void multiplyColA(SparseMatrixFrag* A, DenseMatrixFrag* B, DenseMatrixFrag* C) {
         for (int j=curRow; j<nextRow; j++) {
             int col = A->colIdx[j];
 
-            double A_val = A->value[j];
+            double A_val = A->values[j];
             double B_val = B->get(col, row);
             double val = A_val * B_val;
 
