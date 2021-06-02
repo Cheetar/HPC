@@ -468,14 +468,16 @@ int main(int argc, char * argv[]) {
         B.printout();*/
 
     // ColA algorithm
-    DenseMatrixFrag* C = new DenseMatrixFrag(n, myRank, numProcesses, 0);  // seed is 0, so matrix is all zeros
     for (int iteration = 0; iteration < e; iteration++) {
+        DenseMatrixFrag* C = new DenseMatrixFrag(n, myRank, numProcesses, 0);  // seed is 0, so matrix is all zeros
         for (int round=1; round<=numProcesses; round++) {
             multiplyColA(A, B, C);
             shiftColA(A, myRank, numProcesses, round);
         }
+        delete(B);
+        B = C;
     }
-    C->printout();
+    B->printout();
     // DenseMatrixFrag* whole_C  = gatherResult(C);
     // whole_C->printout();
 
