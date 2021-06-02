@@ -469,15 +469,16 @@ int main(int argc, char * argv[]) {
 
     // ColA algorithm
     DenseMatrixFrag* C = new DenseMatrixFrag(n, myRank, numProcesses, 0);  // seed is 0, so matrix is all zeros
-    for (int round=1; round<=numProcesses; round++) {
-        multiplyColA(A, B, C);
-        shiftColA(A, myRank, numProcesses, round);
+    for (int iteration = 0; iteration < e; iteration++) {
+        for (int round=1; round<=numProcesses; round++) {
+            multiplyColA(A, B, C);
+            shiftColA(A, myRank, numProcesses, round);
+        }
     }
     C->printout();
     // DenseMatrixFrag* whole_C  = gatherResult(C);
     // whole_C->printout();
 
-    MPI_Finalize(); /* mark that we've finished communicating */
-    
+    MPI_Finalize();
     return 0;
 }
