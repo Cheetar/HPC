@@ -154,13 +154,15 @@ void multiplyColA(SparseMatrixFrag* A, DenseMatrixFrag* B, DenseMatrixFrag* C) {
     for (int row=B->firstColIdxIncl; row<B->lastColIdxExcl; row++) {
         int curRow = A->rowIdx[row];
         int nextRow = A->rowIdx[row + 1];
-        for (int j=curRow; j<nextRow; j++) {
-            int col = A->colIdx[j];
-
-            double A_val = A->values[j];
-            double B_val = B->get(col, row);
-            double val = A_val * B_val;
-
+        for (int col=B->firstColIdxIncl; col<B->lastColIdxExcl; col++) {
+            double val = 0;
+            for (int j=curRow; j<nextRow; j++) {
+                int elemCol = A->colIdx[j];
+                
+                double A_val = A->values[j];
+                double B_val = B->get(elemCol, row);
+                val += A_val * B_val;
+            }
             C->add(row, col, val);
         }
     }
