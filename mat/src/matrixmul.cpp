@@ -55,6 +55,8 @@ class SparseMatrixFrag{
             for (int chunkId=0; chunkId<numChunks; chunkId++) {
                 int firstColIdxIncl = getFirstColIdxIncl(chunkId, numChunks, this->n);
                 int lastColIdxExcl = getLastColIdxExcl(chunkId, numChunks, this->n);
+                std::cout << "firstColIdxIncl: " << firstColIdxIncl << std::endl;
+                std::cout << "lastColIdxExcl: " << lastColIdxExcl << std::endl;
                 std::vector<double> chunkValues;
                 std::vector<int> chunkColIdx;
                 std::vector<int> chunkRowIdx;
@@ -190,7 +192,7 @@ int main(int argc, char * argv[]) {
     
     assert (!(g && verbose));  // g and verbose parameters are exclusive
 
-    if (DEBUG) {
+    /*if (DEBUG)
         std::cout << "Argc: " << argc << std::endl
                   << "sparse_matrix_file: " << sparse_matrix_file << std::endl
                   << "seed: " << seed << std::endl
@@ -199,8 +201,7 @@ int main(int argc, char * argv[]) {
                   << "g: " << g << std::endl
                   << "g_val: " << g_val << std::endl
                   << "v: " << verbose << std::endl
-                  << "i: " << inner << std::endl;
-    }
+                  << "i: " << inner << std::endl;*/
 
     // Root process reads and distributes sparse matrix A
     if (myRank == ROOT_PROCESS) {
