@@ -244,6 +244,8 @@ int main(int argc, char * argv[]) {
         MPI_COMM_WORLD
     );
 
+    std::cout << "myRank: " << myRank << "| n: " << n << std::endl;
+
     // Distribute chunks of A over all processes
     if (myRank == ROOT_PROCESS) {
         std::vector<SparseMatrixFrag*> chunks = whole_A->chunk(numProcesses);
