@@ -314,7 +314,7 @@ int main(int argc, char * argv[]) {
         A = new SparseMatrixFrag(n, chunkNumElems, values, rowIdx, colIdx, firstColIdxIncl, lastColIdxExcl);
 
         MPI_Recv(
-            A->values,
+            values,
             chunkNumElems,
             MPI_DOUBLE,
             ROOT_PROCESS,
@@ -324,7 +324,7 @@ int main(int argc, char * argv[]) {
         );
         std::cout << "A->values" << std::endl;
         MPI_Recv(
-            A->rowIdx,
+            rowIdx,
             n+1,
             MPI_INT,
             ROOT_PROCESS,
@@ -334,7 +334,7 @@ int main(int argc, char * argv[]) {
         );
         std::cout << "A->rowIdx" << std::endl;
         MPI_Recv(
-            A->colIdx,
+            colIdx,
             chunkNumElems,
             MPI_INT,
             ROOT_PROCESS,
