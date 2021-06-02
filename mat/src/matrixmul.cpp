@@ -127,6 +127,18 @@ class DenseMatrixFrag{
             delete(this->data);
         }
 
+        void add(int row, int col, double val) {
+            assert(col >= this->firstColIdxIncl && col < this->lastColIdxEx);
+            int local_col = col - this->firstColIdxIncl;
+            this->data[local_col*this->n + row] += val;
+        }
+
+        double get(int row, int col) {
+            assert(col >= this->firstColIdxIncl && col < this->lastColIdxEx);
+            int local_col = col - this->firstColIdxIncl;
+            return this->data[local_col*this->n + row];
+        }
+
         void printout() {
             for (int row=0; row<this->n; row++) {
                 for (int col = this->firstColIdxIncl; col<lastColIdxExcl; col++) {
@@ -138,12 +150,25 @@ class DenseMatrixFrag{
         }
 };
 
+void multiplyColA(SparseMatrixFrag* A, DenseMatrixFrag* B, DenseMatrixFrag* C) {
+    for (int row=B->firstColIdxIncl; row<B->lastColIdxExcl; row++) {
+        int curRow = A->rowIdx[row];
+        int nextRow = A->rowIdx[row + 1];
+        for (int j=curRow; j<nextRow; j++) {
+            int col = A->colIdx[j];
 
+            double A_val = A->value[j];
+            double B_val = B->get(col, row);
+            double val = A_val * B_val;
 
-void multiply(SparseMatrixFrag& A, DenseMatrixFrag& B, DenseMatrixFrag& C) {
-
+            C->add(row, col, val);
+        }
+    }
 }
 
+void shiftColA(SparseMatrixFrag* A) {
+
+}
 
 int main(int argc, char * argv[]) {
     int numProcesses, myRank, seed, c, e, n, chunkNumElems;
@@ -328,7 +353,7 @@ int main(int argc, char * argv[]) {
             MPI_COMM_WORLD,
             &status
         );
-        //chunkNumElems = 4;
+        
         std::cout << "chunkNumElems: " << chunkNumElems << std::endl;
 
         double* values = new double[chunkNumElems];
@@ -346,7 +371,6 @@ int main(int argc, char * argv[]) {
             MPI_COMM_WORLD,
             &status
         );
-        std::cout << "A->values" << std::endl;
         MPI_Recv(
             rowIdx,
             n+1,
@@ -356,7 +380,6 @@ int main(int argc, char * argv[]) {
             MPI_COMM_WORLD,
             &status
         );
-        std::cout << "A->rowIdx" << std::endl;
         MPI_Recv(
             colIdx,
             chunkNumElems,
@@ -366,7 +389,6 @@ int main(int argc, char * argv[]) {
             MPI_COMM_WORLD,
             &status
         ); 
-        std::cout << "A->colIdx" << std::endl;
 
         int firstColIdxIncl = getFirstColIdxIncl(myRank, numProcesses, n);
         int lastColIdxExcl = getLastColIdxExcl(myRank, numProcesses, n);
@@ -383,6 +405,18 @@ int main(int argc, char * argv[]) {
     DenseMatrixFrag B = DenseMatrixFrag(n, myRank, numProcesses, seed);
     /*if (DEBUG)
         B.printout();*/
+
+    // ColA algorithm
+    DenseMatrixFrag* C = new DenseMatrixFrag(n, myRank, numProcesses, 0);  // seed is 0, so matrix is all zeros
+    C->printout();
+    //multiplyColA(A, B. C);
+    /*for (int round=0; round<numProcesses; round++) {
+        multiplyColA(A, B. C);
+        shiftColA(A);
+    }*/
+    C->printout();
+    // DenseMatrixFrag* whole_C  = gatherResult(C);
+    // whole_C->printout();
 
     MPI_Finalize(); /* mark that we've finished communicating */
     
