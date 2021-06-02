@@ -254,14 +254,14 @@ int main(int argc, char * argv[]) {
             chunkNumElems = chunk->numElems;
 
             // Send number of elements in a chunk 
-            MPI_Send(
+            /*MPI_Send(
                 &chunkNumElems,
                 1,
                 MPI_INT,
                 processNum,
                 TAG,
                 MPI_COMM_WORLD
-            );
+            );*/
             MPI_Send(
                 chunk->values,
                 chunkNumElems,
@@ -293,7 +293,7 @@ int main(int argc, char * argv[]) {
         // Initialize chunk of ROOT process
         A = chunks[0];
     } else {
-        MPI_Recv(
+        /*MPI_Recv(
             &chunkNumElems,
             1,
             MPI_INT,
@@ -301,7 +301,8 @@ int main(int argc, char * argv[]) {
             TAG,
             MPI_COMM_WORLD,
             status
-        );
+        );*/
+        chunkNumElems = 4;
         std::cout << "chunkNumElems: " << chunkNumElems << std::endl;
 
         double* values = new double[chunkNumElems];
