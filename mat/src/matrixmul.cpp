@@ -408,8 +408,7 @@ int main(int argc, char * argv[]) {
 
     // ColA algorithm
     DenseMatrixFrag* C = new DenseMatrixFrag(n, myRank, numProcesses, 0);  // seed is 0, so matrix is all zeros
-    C->printout();
-    //multiplyColA(A, B. C);
+    multiplyColA(A, B. C);
     /*for (int round=0; round<numProcesses; round++) {
         multiplyColA(A, B. C);
         shiftColA(A);
