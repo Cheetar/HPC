@@ -236,16 +236,21 @@ int main(int argc, char * argv[]) {
     } 
 
     // Broadcast matrix size
-    MPI_Bcast(
+    /*MPI_Bcast(
         &n,
         1,
         MPI_INT,
         ROOT_PROCESS,
         MPI_COMM_WORLD
-    );
+    );*/
 
     int buffer_send[100];
     int buffer_recv[100];
+
+    for (int i=0; i < 100; i++) {
+        buffer_send[i] = 0;
+        buffer_recv[i] = 0;
+    }
 
     if (myRank == ROOT_PROCESS)
         MPI_Send(
