@@ -19,8 +19,16 @@ int getFirstColIdxIncl(int myRank, int numProcesses, int n) {
     return myRank * n/numProcesses;
 }
 
+int getFirstColIdxIncl(int myRank, int numProcesses, int n, int round) {
+    return getFirstColIdxIncl((myRank + round) % numProcesses, numProcesses, n);
+}
+
 int getLastColIdxExcl(int myRank, int numProcesses, int n) {
     return getFirstColIdxIncl(myRank + 1, numProcesses, n);
+}
+
+int getLastColIdxExcl(int myRank, int numProcesses, int n, int round) {
+    return getFirstColIdxIncl(((myRank + round) % numProcesses) + 1, numProcesses, n);
 }
 
 
@@ -158,7 +166,7 @@ void multiplyColA(SparseMatrixFrag* A, DenseMatrixFrag* B, DenseMatrixFrag* C) {
             double val = 0;
             for (int j=curRow; j<nextRow; j++) {
                 int elemCol = A->colIdx[j];
-                
+
                 double A_val = A->values[j];
                 double B_val = B->get(elemCol, row);
                 val += A_val * B_val;
@@ -168,8 +176,102 @@ void multiplyColA(SparseMatrixFrag* A, DenseMatrixFrag* B, DenseMatrixFrag* C) {
     }
 }
 
-void shiftColA(SparseMatrixFrag* A) {
+void shiftColA(SparseMatrixFrag* A, int myRank, int numProcesses, int round) {
+    MPI_Request requests[8];
+    MPI_Status statuses[8];
 
+    int prevProcessNo = myProcessNo > 0 ? myProcessNo - 1 : numProcesses - 1;
+    int nextProcessNo = myProcessNo < numProcesses - 1 ? myProcessNo + 1 : 0;
+    int n = A->n;
+    MPI_Isend(
+        &A->numElems,
+        1,
+        MPI_INT,
+        nextProcessNo,
+        TAG,
+        MPI_COMM_WORLD,
+        &requests[0]
+    );
+    MPI_Isend(
+        A->values,
+        A->numElems,
+        MPI_DOUBLE,
+        nextProcessNo,
+        TAG,
+        MPI_COMM_WORLD,
+        &requests[1]
+    );
+    MPI_Isend(
+        A->rowIdx,
+        n + 1,
+        MPI_INT,
+        nextProcessNo,
+        TAG,
+        MPI_COMM_WORLD,
+        &requests[2]
+    );
+    MPI_Isend(
+        A->colIdx,
+        A->numElems,
+        MPI_INT,
+        nextProcessNo,
+        TAG,
+        MPI_COMM_WORLD,
+        &requests[3]
+    );
+
+
+    // Receive
+    int chunkNumElems;
+    MPI_Irecv(
+        &chunkNumElems,
+        1,
+        MPI_INT,
+        prevProcessNo,
+        TAG,
+        MPI_COMM_WORLD,
+        &requests[4]
+    );
+    MPI_Wait(&requests[4], &statuses[4]);
+
+    double* values = new double[chunkNumElems];
+    int* rowIdx = new int[A->n + 1];
+    int* colIdx = new int[chunkNumElems];
+
+    MPI_Irecv(
+        values,
+        chunkNumElems,
+        MPI_DOUBLE,
+        prevProcessNo,
+        TAG,
+        MPI_COMM_WORLD,
+        &requests[5]
+    );
+    MPI_Irecv(
+        rowIdx,
+        n + 1,
+        MPI_INT,
+        prevProcessNo,
+        TAG,
+        MPI_COMM_WORLD,
+        &requests[6]
+    );
+    MPI_Irecv(
+        colIdx,
+        chunkNumElems,
+        MPI_INT,
+        prevProcessNo,
+        TAG,
+        MPI_COMM_WORLD,
+        &requests[7]
+    );
+    MPI_Waitall(8, requests, statuses);
+
+    // Replace chunk of data
+    delete A;
+    int firstColIdxIncl = getFirstColIdxIncl(myRank, numProcesses, n, round)
+    int lastColIdxExcl = getLastColIdxExcl(myRank, numProcesses, n, round);
+    A = new SparseMatrixFrag(int n, chunkNumElems, values, rowIdx, colIdx, firstColIdxIncl, lastColIdxExcl);
 }
 
 int main(int argc, char * argv[]) {
@@ -369,11 +471,10 @@ int main(int argc, char * argv[]) {
 
     // ColA algorithm
     DenseMatrixFrag* C = new DenseMatrixFrag(n, myRank, numProcesses, 0);  // seed is 0, so matrix is all zeros
-    multiplyColA(A, B, C);
-    /*for (int round=0; round<numProcesses; round++) {
+    for (int round=1; round<=numProcesses; round++) {
         multiplyColA(A, B. C);
-        shiftColA(A);
-    }*/
+        shiftColA(A, round);
+    }
     C->printout();
     // DenseMatrixFrag* whole_C  = gatherResult(C);
     // whole_C->printout();
