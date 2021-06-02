@@ -262,41 +262,6 @@ int main(int argc, char * argv[]) {
         MPI_COMM_WORLD
     );
 
-/*
-    int buffer_send[100];
-    int buffer_recv[100];
-
-    for (int i=0; i < 100; i++) {
-        buffer_send[i] = 0;
-        buffer_recv[i] = 0;
-    }
-
-    std::cout << "numProcesses" << numProcesses << std::endl;
-
-    if (myRank == ROOT_PROCESS) {
-        MPI_Send(
-            buffer_send,
-            100,
-            MPI_INT,
-            1,
-            TAG,
-            MPI_COMM_WORLD
-        );
-    }
-    else {
-        MPI_Recv(
-            buffer_recv,
-            100,
-            MPI_INT,
-            ROOT_PROCESS,
-            TAG,
-            MPI_COMM_WORLD,
-            &status
-        );
-    }
-*/
-    std::cout << "myRank: " << myRank << " | n: " << n << std::endl;
-
     // Distribute chunks of A over all processes
     if (myRank == ROOT_PROCESS) {
         std::vector<SparseMatrixFrag*> chunks = whole_A->chunk(numProcesses);
@@ -337,8 +302,6 @@ int main(int argc, char * argv[]) {
                 TAG,
                 MPI_COMM_WORLD
             );
-
-            std::cout << "Finished sending to process " << processNum << std::endl;
         }
 
         // Initialize chunk of ROOT process
@@ -353,14 +316,10 @@ int main(int argc, char * argv[]) {
             MPI_COMM_WORLD,
             &status
         );
-        
-        std::cout << "chunkNumElems: " << chunkNumElems << std::endl;
 
         double* values = new double[chunkNumElems];
         int* rowIdx = new int[n + 1];
         int* colIdx = new int[chunkNumElems];
-
-        std::cout << "arrays initialized" << std::endl;
 
         MPI_Recv(
             values,
