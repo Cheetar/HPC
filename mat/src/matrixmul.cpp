@@ -158,13 +158,17 @@ int main(int argc, char * argv[]) {
     SparseMatrixFrag* A;
 
     /* MPI initialization */
-    MPI_Init(&argc,&argv);
+    MPI_Init(&argc, &argv);
+
+    struct timespec spec;
+    srand(spec.tv_nsec); // use nsec to have a different value across different processes
+
     MPI_Comm_size(MPI_COMM_WORLD, &numProcesses);
     MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
 
     /* Read program arguments */
     // Format: matrixmul -f sparse_matrix_file -s seed_for_dense_matrix -c repl_group_size -e exponent [-g ge_value] [-v] [-i]
-    assert((9 <= argc) && (argc <= 13));
+    /*assert((9 <= argc) && (argc <= 13));
 
     assert(strcmp(argv[1], "-f") == 0);
     sparse_matrix_file = argv[2];
@@ -192,17 +196,6 @@ int main(int argc, char * argv[]) {
     }
     
     assert (!(g && verbose));  // g and verbose parameters are exclusive
-
-    /*if (DEBUG)
-        std::cout << "Argc: " << argc << std::endl
-                  << "sparse_matrix_file: " << sparse_matrix_file << std::endl
-                  << "seed: " << seed << std::endl
-                  << "c: " << c << std::endl
-                  << "e: " << e << std::endl
-                  << "g: " << g << std::endl
-                  << "g_val: " << g_val << std::endl
-                  << "v: " << verbose << std::endl
-                  << "i: " << inner << std::endl;*/
 
     // Root process reads and distributes sparse matrix A
     if (myRank == ROOT_PROCESS) {
@@ -234,7 +227,7 @@ int main(int argc, char * argv[]) {
         if (DEBUG)
             whole_A->printout();   
     } 
-
+*/
     // Broadcast matrix size
     /*MPI_Bcast(
         &n,
@@ -252,7 +245,9 @@ int main(int argc, char * argv[]) {
         buffer_recv[i] = 0;
     }
 
-    if (myRank == ROOT_PROCESS)
+    std::cout << "numProcesses" << numProcesses << std::endl;
+
+    if (myRank == ROOT_PROCESS) {
         MPI_Send(
             buffer_send,
             100,
@@ -261,7 +256,8 @@ int main(int argc, char * argv[]) {
             TAG,
             MPI_COMM_WORLD
         );
-    else
+    }
+    else {
         MPI_Recv(
             buffer_recv,
             100,
@@ -271,6 +267,7 @@ int main(int argc, char * argv[]) {
             MPI_COMM_WORLD,
             status
         );
+    }
 
     std::cout << "myRank: " << myRank << " | n: " << n << std::endl;
 
