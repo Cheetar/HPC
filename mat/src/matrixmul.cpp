@@ -168,7 +168,7 @@ void multiplyColA(SparseMatrixFrag* A, DenseMatrixFrag* B, DenseMatrixFrag* C) {
                 int elemCol = A->colIdx[j];
 
                 double A_val = A->values[j];
-                double B_val = B->get(elemCol, row);
+                double B_val = B->get(elemCol, col);
                 val += A_val * B_val;
             }
             C->add(row, col, val);
