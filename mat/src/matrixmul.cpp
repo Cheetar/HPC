@@ -12,6 +12,7 @@
 
 const static bool DEBUG = true;
 const static int ROOT_PROCESS = 0;
+const static int TAG = 13;
 
 
 int getFirstColIdxIncl(int myRank, int numProcesses, int n) {
@@ -44,9 +45,9 @@ class SparseMatrixFrag{
         }
 
         ~SparseMatrixFrag() {
-            delete(this->values);
-            delete(this->rowIdx);
-            delete(this->colIdx);
+            free(this->values);
+            free(this->rowIdx);
+            free(this->colIdx);
         }
 
         std::vector<SparseMatrixFrag*> chunk(int numChunks) {
@@ -153,6 +154,8 @@ int main(int argc, char * argv[]) {
     double g_val;
 
     MPI_Status *status;
+    SparseMatrixFrag whole_A;
+    SparseMatrixFrag* A;
 
     /* MPI initialization */
     MPI_Init(&argc,&argv);
@@ -227,14 +230,9 @@ int main(int argc, char * argv[]) {
         
         ReadFile.close();
 
-        SparseMatrixFrag A = SparseMatrixFrag(n, elems, values, rowIdx, colIdx, 0, n);
+        whole_A = SparseMatrixFrag(n, elems, values, rowIdx, colIdx, 0, n);
         if (DEBUG)
-            A.printout(); 
-
-        std::vector<SparseMatrixFrag*> chunks = A.chunk(numProcesses);
-        for(std::vector<SparseMatrixFrag*>::iterator it = chunks.begin(); it != chunks.end(); ++it) {
-            SparseMatrixFrag* chunk = *it; 
-        }
+            whole_A.printout(); 
     }
     
     // Broadcast matrix size
@@ -245,15 +243,96 @@ int main(int argc, char * argv[]) {
         ROOT_PROCESS,
         MPI_COMM_WORLD
     );
-    
-    std::cout << "n: " << n << std::endl;
 
     // TODO Distribute chunks over all processes
     if (myRank == ROOT_PROCESS) {
-        
-    } else {
+        std::vector<SparseMatrixFrag*> chunks = whole_A.chunk(numProcesses);
+        for (int processNum=1; processNum<numProcesses; processNum++){
+            SparseMatrixFrag* chunk = chunks[processNum];
+            int chunkNumElems = chunk->numElems;
+            // Send number of elements in a chunk 
+            MPI_Send(
+                &chunkNumElems,
+                1,
+                MPI_INT,
+                processNum,
+                TAG,
+                MPI_COMM_WORLD
+            );
+            MPI_Send(
+                chunk->values,
+                chunkNumElems,
+                MPI_INT,
+                processNum,
+                TAG,
+                MPI_COMM_WORLD
+            );
+            MPI_Send(
+                chunk->rowIdx,
+                n+1,
+                MPI_INT,
+                processNum,
+                TAG,
+                MPI_COMM_WORLD
+            );
+            MPI_Send(
+                chunk->colIdx,
+                chunkNumElems,
+                MPI_INT,
+                processNum,
+                TAG,
+                MPI_COMM_WORLD
+            );
+        }
 
+        // Initialize chunk of ROOT process
+        A = chunks[0];
+    } else {
+        int chunkNumElems;
+        MPI_Recv(
+            &chunkNumElems,
+            1,
+            MPI_INT,
+            processNum,
+            TAG,
+            MPI_COMM_WORLD
+        );
+        double* values = new double[chunkNumElems];
+        int* rowIdx = new int[n + 1];
+        int* colIdx = new int[chunkNumElems];
+
+        int firstColIdxIncl = getFirstColIdxIncl(myRank, numProcesses, n);
+        int lastColIdxExcl = getLastColIdxExcl(myRank, numProcesses, n);
+        A = new SparseMatrixFrag(n, chunkNumElems, values, rowIdx, colIdx, firstColIdxIncl, lastColIdxExcl);
+
+        MPI_Recv(
+            A->values,
+            chunkNumElems,
+            MPI_INT,
+            ROOT_PROCESS,
+            TAG,
+            MPI_COMM_WORLD
+        );
+        MPI_Recv(
+            A->rowIdx,
+            n+1,
+            MPI_INT,
+            ROOT_PROCESS,
+            TAG,
+            MPI_COMM_WORLD
+        );
+        MPI_Recv(
+            A->colIdx,
+            chunkNumElems,
+            MPI_INT,
+            ROOT_PROCESS,
+            TAG,
+            MPI_COMM_WORLD
+        ); 
     }
+
+    std::cout << "myRank: " << myRank << std::endl;
+    A->printout();
 
     // TODO for simpicity, later pad with zeros
     assert(n % numProcesses == 0);
