@@ -312,7 +312,7 @@ int main(int argc, char * argv[]) {
         std::cout << "arrays initialized" << std::endl;
 
         MPI_Recv(
-            values,
+            *values,
             chunkNumElems,
             MPI_DOUBLE,
             ROOT_PROCESS,
