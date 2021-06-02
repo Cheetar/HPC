@@ -290,10 +290,6 @@ int main(int argc, char * argv[]) {
 
     /* MPI initialization */
     MPI_Init(&argc, &argv);
-
-    struct timespec spec;
-    srand(spec.tv_nsec); // use nsec to have a different value across different processes
-
     MPI_Comm_size(MPI_COMM_WORLD, &numProcesses);
     MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
 
