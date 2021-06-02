@@ -229,14 +229,15 @@ int main(int argc, char * argv[]) {
     } 
 */
     // Broadcast matrix size
-    /*MPI_Bcast(
+    MPI_Bcast(
         &n,
         1,
         MPI_INT,
         ROOT_PROCESS,
         MPI_COMM_WORLD
-    );*/
+    );
 
+/*
     int buffer_send[100];
     int buffer_recv[100];
 
@@ -268,7 +269,7 @@ int main(int argc, char * argv[]) {
             &status
         );
     }
-
+*/
     std::cout << "myRank: " << myRank << " | n: " << n << std::endl;
 
     // Distribute chunks of A over all processes
@@ -279,14 +280,14 @@ int main(int argc, char * argv[]) {
             chunkNumElems = chunk->numElems;
 
             // Send number of elements in a chunk 
-            /*MPI_Send(
+            MPI_Send(
                 &chunkNumElems,
                 1,
                 MPI_INT,
                 processNum,
                 TAG,
                 MPI_COMM_WORLD
-            );*/
+            );
             MPI_Send(
                 chunk->values,
                 chunkNumElems,
@@ -318,16 +319,16 @@ int main(int argc, char * argv[]) {
         // Initialize chunk of ROOT process
         A = chunks[0];
     } else {
-        /*MPI_Recv(
+        MPI_Recv(
             &chunkNumElems,
             1,
             MPI_INT,
             ROOT_PROCESS,
             TAG,
             MPI_COMM_WORLD,
-            status
-        );*/
-        chunkNumElems = 4;
+            &status
+        );
+        //chunkNumElems = 4;
         std::cout << "chunkNumElems: " << chunkNumElems << std::endl;
 
         double* values = new double[chunkNumElems];
