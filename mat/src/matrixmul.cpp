@@ -146,7 +146,7 @@ void multiply(SparseMatrixFrag& A, DenseMatrixFrag& B, DenseMatrixFrag& C) {
 
 
 int main(int argc, char * argv[]) {
-    int numProcesses, myRank, seed, c, e, n;
+    int numProcesses, myRank, seed, c, e, n, chunkNumElems;
     bool g = false;
     bool verbose = false;
     bool inner = false;
@@ -244,14 +244,14 @@ int main(int argc, char * argv[]) {
         MPI_COMM_WORLD
     );
 
-    std::cout << "myRank: " << myRank << "| n: " << n << std::endl;
+    std::cout << "myRank: " << myRank << " | n: " << n << std::endl;
 
     // Distribute chunks of A over all processes
     if (myRank == ROOT_PROCESS) {
         std::vector<SparseMatrixFrag*> chunks = whole_A->chunk(numProcesses);
         for (int processNum=1; processNum<numProcesses; processNum++){
             SparseMatrixFrag* chunk = chunks[processNum];
-            int chunkNumElems = chunk->numElems;
+            chunkNumElems = chunk->numElems;
 
             // Send number of elements in a chunk 
             MPI_Send(
@@ -293,7 +293,6 @@ int main(int argc, char * argv[]) {
         // Initialize chunk of ROOT process
         A = chunks[0];
     } else {
-        int chunkNumElems;
         MPI_Recv(
             &chunkNumElems,
             1,
