@@ -343,7 +343,7 @@ int main(int argc, char * argv[]) {
             ROOT_PROCESS,
             TAG,
             MPI_COMM_WORLD,
-            status
+            &status
         );
         std::cout << "A->values" << std::endl;
         MPI_Recv(
@@ -353,7 +353,7 @@ int main(int argc, char * argv[]) {
             ROOT_PROCESS,
             TAG,
             MPI_COMM_WORLD,
-            status
+            &status
         );
         std::cout << "A->rowIdx" << std::endl;
         MPI_Recv(
@@ -363,7 +363,7 @@ int main(int argc, char * argv[]) {
             ROOT_PROCESS,
             TAG,
             MPI_COMM_WORLD,
-            status
+            &status
         ); 
         std::cout << "A->colIdx" << std::endl;
 
