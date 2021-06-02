@@ -30,15 +30,15 @@ class SparseMatrixFrag{
         int firstColIdxIncl;
         int lastColIdxExcl;
         double* values;
-        int* colIdx;
         int* rowIdx;
+        int* colIdx;
 
         SparseMatrixFrag(int n, int numElems, double* values, int* rowIdx, int* colIdx, int firstColIdxIncl, int lastColIdxExcl) {
             this->n = n;
             this->numElems = numElems;
             this->values = values;
-            this->colIdx = colIdx;
             this->rowIdx = rowIdx;
+            this->colIdx = colIdx;
             this->firstColIdxIncl = firstColIdxIncl;
             this->lastColIdxExcl = lastColIdxExcl;
         }
@@ -58,8 +58,8 @@ class SparseMatrixFrag{
                 //std::cout << "firstColIdxIncl: " << firstColIdxIncl << std::endl;
                 //std::cout << "lastColIdxExcl: " << lastColIdxExcl << std::endl;
                 std::vector<double> chunkValues;
-                std::vector<int> chunkColIdx;
                 std::vector<int> chunkRowIdx;
+                std::vector<int> chunkColIdx;
                 int numElementsInChunk = 0;
                 chunkRowIdx.push_back(0);
                 for (int row=0; row<n; row++) {
@@ -86,31 +86,33 @@ class SparseMatrixFrag{
                     std::cout << chunkValues[i] << ' ';
                 std::cout << std::endl;
 
+                 for(int i=0; i<chunkRowIdx.size(); ++i)
+                    std::cout << chunkRowIdx[i] << ' ';
+                std::cout << std::endl;
+
                 for(int i=0; i<chunkColIdx.size(); ++i)
                     std::cout << chunkColIdx[i] << ' ';
                 std::cout << std::endl;
 
-                for(int i=0; i<chunkRowIdx.size(); ++i)
-                    std::cout << chunkRowIdx[i] << ' ';
-                std::cout << std::endl;
-
+               
                 std::cout << "im here" << std::endl;
 
                 for(int i=0; i<numElementsInChunk; ++i)
                     std::cout << values[i] << ' ';
                 std::cout << std::endl;
 
-                for(int i=0; i<numElementsInChunk; ++i)
-                    std::cout << colIdx[i] << ' ';
-                std::cout << std::endl;
-
                 for(int i=0; i<n+1; ++i)
                     std::cout << rowIdx[i] << ' ';
+                std::cout << std::endl;
+
+                for(int i=0; i<numElementsInChunk; ++i)
+                    std::cout << colIdx[i] << ' ';
                 std::cout << std::endl;
 
                 std::cout << "im here" << std::endl;
 
                 SparseMatrixFrag chunk = SparseMatrixFrag(this->n, numElementsInChunk, values, rowIdx, colIdx, firstColIdxIncl, lastColIdxExcl);
+                chunk.printout();
                 chunks.push_back(chunk);
             }
             return chunks;
