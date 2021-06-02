@@ -159,7 +159,7 @@ class DenseMatrixFrag{
 };
 
 void multiplyColA(SparseMatrixFrag* A, DenseMatrixFrag* B, DenseMatrixFrag* C) {
-    for (int row=0; row<n; row++) {
+    for (int row=0; row<A->n; row++) {
         int curRow = A->rowIdx[row];
         int nextRow = A->rowIdx[row + 1];
         for (int col=B->firstColIdxIncl; col<B->lastColIdxExcl; col++) {
