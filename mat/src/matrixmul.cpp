@@ -309,10 +309,6 @@ int main(int argc, char * argv[]) {
         int* rowIdx = new int[n + 1];
         int* colIdx = new int[chunkNumElems];
 
-        int firstColIdxIncl = getFirstColIdxIncl(myRank, numProcesses, n);
-        int lastColIdxExcl = getLastColIdxExcl(myRank, numProcesses, n);
-        A = new SparseMatrixFrag(n, chunkNumElems, values, rowIdx, colIdx, firstColIdxIncl, lastColIdxExcl);
-
         MPI_Recv(
             values,
             chunkNumElems,
@@ -343,6 +339,10 @@ int main(int argc, char * argv[]) {
             status
         ); 
         std::cout << "A->colIdx" << std::endl;
+
+        int firstColIdxIncl = getFirstColIdxIncl(myRank, numProcesses, n);
+        int lastColIdxExcl = getLastColIdxExcl(myRank, numProcesses, n);
+        A = new SparseMatrixFrag(n, chunkNumElems, values, rowIdx, colIdx, firstColIdxIncl, lastColIdxExcl);
     }
 
     std::cout << "myRank: " << myRank << std::endl;
