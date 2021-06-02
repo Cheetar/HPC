@@ -301,6 +301,8 @@ int main(int argc, char * argv[]) {
             MPI_COMM_WORLD,
             status
         );
+        std::cout << "chunkNumElems: " << chunkNumElems << std::endl;
+
         double* values = new double[chunkNumElems];
         int* rowIdx = new int[n + 1];
         int* colIdx = new int[chunkNumElems];
@@ -318,6 +320,7 @@ int main(int argc, char * argv[]) {
             MPI_COMM_WORLD,
             status
         );
+        std::cout << "A->values" << std::endl;
         MPI_Recv(
             A->rowIdx,
             n+1,
@@ -327,6 +330,7 @@ int main(int argc, char * argv[]) {
             MPI_COMM_WORLD,
             status
         );
+        std::cout << "A->rowIdx" << std::endl;
         MPI_Recv(
             A->colIdx,
             chunkNumElems,
@@ -336,6 +340,7 @@ int main(int argc, char * argv[]) {
             MPI_COMM_WORLD,
             status
         ); 
+        std::cout << "A->colIdx" << std::endl;
     }
 
     std::cout << "myRank: " << myRank << std::endl;
