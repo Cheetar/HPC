@@ -153,7 +153,7 @@ int main(int argc, char * argv[]) {
     char* sparse_matrix_file; 
     double g_val;
 
-    MPI_Status *status;
+    MPI_Status status;
     SparseMatrixFrag* whole_A;
     SparseMatrixFrag* A;
 
@@ -265,7 +265,7 @@ int main(int argc, char * argv[]) {
             ROOT_PROCESS,
             TAG,
             MPI_COMM_WORLD,
-            status
+            &status
         );
     }
 
