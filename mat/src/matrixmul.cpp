@@ -53,9 +53,9 @@ class SparseMatrixFrag{
         }
 
         ~SparseMatrixFrag() {
-            free(this->values);
-            free(this->rowIdx);
-            free(this->colIdx);
+            delete(this->values);
+            delete(this->rowIdx);
+            delete(this->colIdx);
         }
 
         std::vector<SparseMatrixFrag*> chunk(int numChunks) {
@@ -82,9 +82,9 @@ class SparseMatrixFrag{
                     chunkRowIdx.push_back(numElementsInChunk);
                 }
 
-                double* values = (double*)malloc(sizeof(double) * numElementsInChunk);
-                int* rowIdx = (int*)malloc(sizeof(int) * (n+1));
-                int* colIdx = (int*)malloc(sizeof(int) * numElementsInChunk);
+                double* values = new double[numElementsInChunk];
+                int* rowIdx = new int[n+1];
+                int* colIdx = new int[numElementsInChunk];
                 std::copy(chunkValues.begin(), chunkValues.end(), values);
                 std::copy(chunkRowIdx.begin(), chunkRowIdx.end(), rowIdx);
                 std::copy(chunkColIdx.begin(), chunkColIdx.end(), colIdx);
@@ -267,12 +267,14 @@ void shiftColA(SparseMatrixFrag* A, int myRank, int numProcesses, int round) {
         MPI_COMM_WORLD,
         &requests[7]
     );
-    MPI_Waitall(8, requests, statuses);
 
-    // Replace chunk of data
+    // Delete old chunk of data
     delete A;
     int firstColIdxIncl = getFirstColIdxIncl(myRank, numProcesses, n, round);
     int lastColIdxExcl = getLastColIdxExcl(myRank, numProcesses, n, round);
+
+    // Create a new chunk
+    MPI_Waitall(8, requests, statuses);
     A = new SparseMatrixFrag(n, chunkNumElems, values, rowIdx, colIdx, firstColIdxIncl, lastColIdxExcl);
 }
 
@@ -294,6 +296,7 @@ int main(int argc, char * argv[]) {
     MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
 
     /* Read program arguments */
+    // Order of arguments is important!
     // Format: matrixmul -f sparse_matrix_file -s seed_for_dense_matrix -c repl_group_size -e exponent [-g ge_value] [-v] [-i]
     assert((9 <= argc) && (argc <= 13));
 
@@ -322,7 +325,8 @@ int main(int argc, char * argv[]) {
         }
     }
     
-    assert (!(g && verbose));  // g and verbose parameters are exclusive
+    // g and verbose parameters are exclusive
+    assert (!(g && verbose));  
 
     // Root process reads and distributes sparse matrix A
     if (myRank == ROOT_PROCESS) {
@@ -473,6 +477,8 @@ int main(int argc, char * argv[]) {
         for (int round=1; round<=numProcesses; round++) {
             multiplyColA(A, B, C);
             shiftColA(A, myRank, numProcesses, round);
+            std::cout << "myRank: " << myRank << std::endl;
+            A->printout();
         }
         delete(B);
         B = C;
