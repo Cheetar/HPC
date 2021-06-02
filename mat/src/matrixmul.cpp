@@ -244,6 +244,28 @@ int main(int argc, char * argv[]) {
         MPI_COMM_WORLD
     );
 
+    int buffer[100];
+
+    if (myRank == ROOT_PROCESS)
+        MPI_Send(
+            buffer,
+            100,
+            MPI_INT,
+            1,
+            TAG,
+            MPI_COMM_WORLD
+        );
+    else
+        MPI_Recv(
+            buffer,
+            100,
+            MPI_DOUBLE,
+            ROOT_PROCESS,
+            TAG,
+            MPI_COMM_WORLD,
+            status
+        );
+
     std::cout << "myRank: " << myRank << " | n: " << n << std::endl;
 
     // Distribute chunks of A over all processes
@@ -312,7 +334,7 @@ int main(int argc, char * argv[]) {
         std::cout << "arrays initialized" << std::endl;
 
         MPI_Recv(
-            *values,
+            values,
             chunkNumElems,
             MPI_DOUBLE,
             ROOT_PROCESS,
