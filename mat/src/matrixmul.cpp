@@ -160,7 +160,7 @@ class DenseMatrixFrag{
         void addChunk(DenseMatrixFrag* chunk) {
             for (int col=chunk->firstColIdxIncl; col < this->lastColIdxExcl; col++) {
                 for (int row=0; row<this->n; row++) {
-                    double val = chunk->get(int row, int col);
+                    double val = chunk->get(row, col);
                     this->add(row, col, val);
                 }
             }
