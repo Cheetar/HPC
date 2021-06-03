@@ -119,12 +119,14 @@ class DenseMatrixFrag{
         int lastColIdxExcl;
         double* data;  // Data aligned by columns i.e. first n entries represent first column
 
-        DenseMatrixFrag(int n, int myRank, int numProcesses) {
+        DenseMatrixFrag(int n, int firstColIdxIncl, int lastColIdxExcl) {
             this->n = n;
-            this->firstColIdxIncl = getFirstColIdxIncl(myRank, numProcesses, n);
-            this->lastColIdxExcl = getLastColIdxExcl(myRank, numProcesses, n);
-            this->numElems = n*n/numProcesses;
-            this->data = new double[n*n/numProcesses];
+            this->firstColIdxIncl = firstColIdxIncl;
+            this->lastColIdxExcl = lastColIdxExcl;
+            this->numElems = n * (lastColIdxExcl - firstColIdxIncl);
+            this->data = new double[this->numElems];
+            for (int i=0; i<this->numElems; i++)
+                this->data[i] = 0;
         }
 
         DenseMatrixFrag(int n, int myRank, int numProcesses, int seed) {
@@ -158,7 +160,7 @@ class DenseMatrixFrag{
         }
 
         void addChunk(DenseMatrixFrag* chunk) {
-            for (int col=chunk->firstColIdxIncl; col < this->lastColIdxExcl; col++) {
+            for (int col=chunk->firstColIdxIncl; col < chunk->lastColIdxExcl; col++) {
                 for (int row=0; row<this->n; row++) {
                     double val = chunk->get(row, col);
                     this->add(row, col, val);
@@ -174,6 +176,19 @@ class DenseMatrixFrag{
                 }
                 std::cout << std::endl;
             }
+        }
+
+        // Prints number of elements greater or equal th
+        void printout(double th) {
+            int numElems = 0;
+            for (int row=0; row<this->n; row++) {
+                for (int col = this->firstColIdxIncl; col<lastColIdxExcl; col++) {
+                    int local_col = col - this->firstColIdxIncl;
+                    if (data[local_col*n + row] >= th)
+                        numElems++;
+                }
+            }
+            std::cout << numElems << std::endl;
         }
 };
 
@@ -288,16 +303,16 @@ void shiftColA(SparseMatrixFrag* A, int myRank, int numProcesses, int round) {
     );
 
     // Delete old chunk of data
-    delete A;
     int firstColIdxIncl = getFirstColIdxIncl(myRank, numProcesses, n, round);
     int lastColIdxExcl = getLastColIdxExcl(myRank, numProcesses, n, round);
 
     // Create a new chunk
     MPI_Waitall(8, requests, statuses);
+    delete A;
     A = new SparseMatrixFrag(n, chunkNumElems, values, rowIdx, colIdx, firstColIdxIncl, lastColIdxExcl);
 }
 
-void gatherResult(int myRank, int numProcesses, DenseMatrixFrag* C, DenseMatrixFrag* whole_C) {
+DenseMatrixFrag* gatherResult(int myRank, int numProcesses, DenseMatrixFrag* C) {
     if (myRank == ROOT_PROCESS) {
         MPI_Request requests[numProcesses - 1];
         MPI_Status statuses[numProcesses - 1];
@@ -306,11 +321,11 @@ void gatherResult(int myRank, int numProcesses, DenseMatrixFrag* C, DenseMatrixF
         chunks.push_back(C);  // Add chunk of ROOT process
 
         for (int processNum=1; processNum<numProcesses; processNum++) {
-            DenseMatrixFrag* chunk = new DenseMatrixFrag(C->n, processNum, numProcesses);
+            DenseMatrixFrag* chunk = new DenseMatrixFrag(C->n, processNum, numProcesses, 0);
             chunks.push_back(chunk);
             MPI_Irecv(
-                chunk->data,
-                chunk->numElems,
+                chunks[processNum]->data,
+                chunks[processNum]->numElems,
                 MPI_DOUBLE,
                 processNum,
                 TAG,
@@ -321,12 +336,11 @@ void gatherResult(int myRank, int numProcesses, DenseMatrixFrag* C, DenseMatrixF
         MPI_Waitall(numProcesses - 1, requests, statuses);
 
         // seed is 0, so matrix is empty (filled with zeros)
-        whole_C = new DenseMatrixFrag(C->n, myRank, numProcesses, 0); 
+        DenseMatrixFrag* whole_C = new DenseMatrixFrag(C->n, 0 /*firstColIdxIncl*/, C->n /*lastColIdxExcl*/); 
         // Marge chunks into one final matrix
-        for (int i=0; i<numProcesses; i++) {
+        for (int i=0; i<numProcesses; i++)
             whole_C->addChunk(chunks[i]);
-        }
-
+        return whole_C;
     } else {
         MPI_Request request;
         MPI_Isend(
@@ -338,6 +352,7 @@ void gatherResult(int myRank, int numProcesses, DenseMatrixFrag* C, DenseMatrixF
             MPI_COMM_WORLD,
             &request
         );
+        return nullptr;
     }
 }
 
@@ -391,8 +406,7 @@ int main(int argc, char * argv[]) {
         }
     }
     
-    // g and verbose parameters are exclusive
-    assert (!(g && verbose));  
+    assert (!(g && verbose));  // g and verbose parameters are exclusive
 
     // Root process reads and distributes sparse matrix A
     if (myRank == ROOT_PROCESS) {
@@ -421,8 +435,6 @@ int main(int argc, char * argv[]) {
         ReadFile.close();
 
         whole_A = new SparseMatrixFrag(n, elems, values, rowIdx, colIdx, 0, n);
-        if (DEBUG)
-            whole_A->printout();   
     } 
 
     // Broadcast matrix size
@@ -433,6 +445,8 @@ int main(int argc, char * argv[]) {
         ROOT_PROCESS,
         MPI_COMM_WORLD
     );
+
+    assert (numProcesses <= n);
 
     // Distribute chunks of A over all processes
     if (myRank == ROOT_PROCESS) {
@@ -474,10 +488,15 @@ int main(int argc, char * argv[]) {
                 TAG,
                 MPI_COMM_WORLD
             );
+
+            // ROOT process no longer needs to store chunks of processes after it was sent
+            delete(chunk);
         }
 
         // Initialize chunk of ROOT process
         A = chunks[0];
+        // ROOT process no longer needs to store the whole matrix A
+        delete(whole_A);
     } else {
         MPI_Recv(
             &chunkNumElems,
@@ -531,8 +550,6 @@ int main(int argc, char * argv[]) {
 
     // Generate fragment of dense matrix
     B = new DenseMatrixFrag(n, myRank, numProcesses, seed);
-    /*if (DEBUG)
-        B.printout();*/
 
     // ColA algorithm
     for (int iteration = 0; iteration < e; iteration++) {
@@ -544,13 +561,21 @@ int main(int argc, char * argv[]) {
         delete(B);
         B = C;
     }
-    gatherResult(myRank, numProcesses, C, whole_C);
+    
+    // Show result
+    whole_C = gatherResult(myRank, numProcesses, C);
+    if (myRank == ROOT_PROCESS) {
+        if (verbose)
+            whole_C->printout();
+        if (g)
+            whole_C->printout(g_val);
+    }
+    
+    // Clean up
+    delete(A);
     delete(C);
     if (myRank == ROOT_PROCESS)
-        whole_C->printout();
-
-    delete(A);
+        delete(whole_C);
     MPI_Finalize();
-
     return 0;
 }
