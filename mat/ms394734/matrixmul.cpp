@@ -10,26 +10,27 @@
 #include "densematgen.h"
 #include <vector>
 #include <cstdlib>
+#include "utils.h"
 
 const static bool DEBUG = true;
 const static int ROOT_PROCESS = 0;
 const static int TAG = 13;
 
-
-int getFirstColIdxIncl(int myRank, int numProcesses, int n) {
+/*
+int calcFirstColIdxIncl(int myRank, int numProcesses, int n) {
     return myRank * n/numProcesses;
 }
 
-int getFirstColIdxIncl(int myRank, int numProcesses, int n, int round) {
-    return getFirstColIdxIncl((myRank + round) % numProcesses, numProcesses, n);
+int getFirstColIdxIncl(int myRank, int numProcesses, int n, int round=0, int c=1) {
+    int groupSize = numProcesses/c;
+    int groupRank = myRank % groupSize;
+    return calcFirstColIdxIncl(((groupRank + round) % groupSize), groupSize, n);
 }
 
-int getLastColIdxExcl(int myRank, int numProcesses, int n) {
-    return getFirstColIdxIncl(myRank + 1, numProcesses, n);
-}
-
-int getLastColIdxExcl(int myRank, int numProcesses, int n, int round) {
-    return getFirstColIdxIncl(((myRank + round) % numProcesses) + 1, numProcesses, n);
+int getLastColIdxExcl(int myRank, int numProcesses, int n, int round=0, int c=1) {
+    int groupSize = numProcesses/c;
+    int groupRank = myRank % groupSize;
+    return calcFirstColIdxIncl(((groupRank + round) % groupSize) + 1, groupSize, n);
 }
 
 
@@ -141,25 +142,13 @@ class DenseMatrixFrag{
         int lastColIdxExcl;
         double* data;  // Data aligned by columns i.e. first n entries represent first column
 
-        DenseMatrixFrag(int n, int pad_size, int firstColIdxIncl, int lastColIdxExcl) {
-            // Create empty dense matrix
+        DenseMatrixFrag(int n, int pad_size, int firstColIdxIncl, int lastColIdxExcl, int seed=0) {
             this->n = n;
             this->pad_size = pad_size;
             this->firstColIdxIncl = firstColIdxIncl;
             this->lastColIdxExcl = lastColIdxExcl;
-            this->numElems = n * (lastColIdxExcl - firstColIdxIncl);
-            this->data = new double[this->numElems];
-            for (int i=0; i<this->numElems; i++)
-                this->data[i] = 0;
-        }
-
-        DenseMatrixFrag(int n, int pad_size, int myRank, int numProcesses, int seed) {
-            this->n = n;
-            this->pad_size = pad_size;
-            this->firstColIdxIncl = getFirstColIdxIncl(myRank, numProcesses, n);
-            this->lastColIdxExcl = getLastColIdxExcl(myRank, numProcesses, n);
-            this->numElems = n*n/numProcesses;
-            this->data = new double[n*n/numProcesses];
+            this->numElems = n*(lastColIdxExcl - firstColIdxIncl);
+            this->data = new double[n*(lastColIdxExcl - firstColIdxIncl)];
             for (int global_col=this->firstColIdxIncl; global_col<this->lastColIdxExcl; global_col++) {
                 for (int row=0; row<n; row++) {
                     int local_col = global_col - this->firstColIdxIncl;
@@ -220,7 +209,7 @@ class DenseMatrixFrag{
             std::cout << numElems << std::endl;
         }
 };
-
+*/
 void multiplyColA(SparseMatrixFrag* A, DenseMatrixFrag* B, DenseMatrixFrag* C) {
     if (A->numElems > 0) {
         for (int row=0; row<A->n; row++) {
@@ -241,14 +230,17 @@ void multiplyColA(SparseMatrixFrag* A, DenseMatrixFrag* B, DenseMatrixFrag* C) {
     }
 }
 
-SparseMatrixFrag* shiftColA(SparseMatrixFrag* A, int myRank, int numProcesses, int round) {
+SparseMatrixFrag* shiftColA(SparseMatrixFrag* A, int myRank, int numProcesses, int round, int c) {
     int n = A->n;
     int pad_size = A->pad_size;
     int chunkNumElems;
-    int firstColIdxIncl = getFirstColIdxIncl(myRank, numProcesses, n, round);
-    int lastColIdxExcl = getLastColIdxExcl(myRank, numProcesses, n, round);
-    int prevProcessNo = myRank > 0 ? myRank - 1 : numProcesses - 1;
-    int nextProcessNo = myRank < numProcesses - 1 ? myRank + 1 : 0;
+    int firstColIdxIncl = getFirstColIdxIncl(myRank, numProcesses, n, round, c);
+    int lastColIdxExcl = getLastColIdxExcl(myRank, numProcesses, n, round, c);
+    int groupSize = numProcesses/c;
+    int groupRank = myRank % groupSize;
+    int groupNumber = myRank / groupSize;
+    int prevProcessNo = groupRank > 0 ? myRank - 1 : myRank + groupSize - 1;
+    int nextProcessNo = groupRank < groupSize - 1 ? myRank + 1 : groupNumber * groupSize;
     double* values;
     int* rowIdx;
     int* colIdx;
@@ -365,6 +357,8 @@ SparseMatrixFrag* shiftColA(SparseMatrixFrag* A, int myRank, int numProcesses, i
 }
 
 DenseMatrixFrag* gatherResult(int myRank, int numProcesses, DenseMatrixFrag* C) {
+    int firstColIdxIncl, lastColIdxExcl;
+    int n = C->n;
     if (myRank == ROOT_PROCESS) {
         MPI_Request requests[numProcesses - 1];
         MPI_Status statuses[numProcesses - 1];
@@ -373,7 +367,10 @@ DenseMatrixFrag* gatherResult(int myRank, int numProcesses, DenseMatrixFrag* C) 
         chunks.push_back(C);  // Add chunk of ROOT process
 
         for (int processNum=1; processNum<numProcesses; processNum++) {
-            DenseMatrixFrag* chunk = new DenseMatrixFrag(C->n, C->pad_size, processNum, numProcesses, 0);
+            firstColIdxIncl = getFirstColIdxIncl(processNum, numProcesses, n);
+            lastColIdxExcl = getLastColIdxExcl(processNum, numProcesses, n);
+            // Create empty placeholders for partial results
+            DenseMatrixFrag* chunk = new DenseMatrixFrag(C->n, C->pad_size, firstColIdxIncl, lastColIdxExcl);
             chunks.push_back(chunk);
             MPI_Irecv(
                 chunks[processNum]->data,
@@ -413,6 +410,7 @@ DenseMatrixFrag* gatherResult(int myRank, int numProcesses, DenseMatrixFrag* C) 
 
 int main(int argc, char * argv[]) {
     int numProcesses, myRank, seed, c, e, n, org_n, pad_size, chunkNumElems;
+    int firstColIdxIncl, lastColIdxExcl;
     bool g = false;
     bool verbose = false;
     bool inner = false;
@@ -520,14 +518,17 @@ int main(int argc, char * argv[]) {
     assert(n > 0);
     assert(pad_size >= 0);
     assert(numProcesses <= n);
-    // Check if we padded the matrix correctly
-    assert(n % numProcesses == 0);
+    assert(numProcesses >= c);
+    assert(numProcesses % c == 0);
+    assert(n % numProcesses == 0);  // Check if we padded the matrix correctly
+
+    int groupSize = numProcesses/c;
 
     // Distribute chunks of A over all processes
     if (myRank == ROOT_PROCESS) {
-        std::vector<SparseMatrixFrag*> chunks = whole_A->chunk(numProcesses);
+        std::vector<SparseMatrixFrag*> chunks = whole_A->chunk(groupSize);
         for (int processNum=1; processNum<numProcesses; processNum++){
-            SparseMatrixFrag* chunk = chunks[processNum];
+            SparseMatrixFrag* chunk = chunks[processNum%groupSize];
             chunkNumElems = chunk->numElems;
 
             // Send number of elements in a chunk 
@@ -566,12 +567,14 @@ int main(int argc, char * argv[]) {
                     MPI_COMM_WORLD
                 );
             }
-            // ROOT process no longer needs to store chunks of processes after it was sent
-            delete(chunk);
         }
 
         // Initialize chunk of ROOT process
         A = chunks[0];
+        
+        // Delete temporary chunks
+        for (int i=1; i<chunks.size(); i++)
+            delete(chunks[i]);
         // ROOT process no longer needs to store the whole matrix A
         delete(whole_A);
     } else {
@@ -585,8 +588,8 @@ int main(int argc, char * argv[]) {
             &status
         );
 
-        int firstColIdxIncl = getFirstColIdxIncl(myRank, numProcesses, n);
-        int lastColIdxExcl = getLastColIdxExcl(myRank, numProcesses, n);
+        int firstColIdxIncl = getFirstColIdxIncl(myRank, numProcesses, n, 0 /*round*/, c);
+        int lastColIdxExcl = getLastColIdxExcl(myRank, numProcesses, n, 0 /*round*/, c);
 
         if (chunkNumElems > 0) {
             double* values = new double[chunkNumElems];
@@ -630,14 +633,17 @@ int main(int argc, char * argv[]) {
     }
 
     // Generate fragment of dense matrix
-    B = new DenseMatrixFrag(n, pad_size, myRank, numProcesses, seed);
+    firstColIdxIncl = getFirstColIdxIncl(myRank, numProcesses, n);
+    lastColIdxExcl = getLastColIdxExcl(myRank, numProcesses, n);
+    B = new DenseMatrixFrag(n, pad_size, firstColIdxIncl, lastColIdxExcl, seed);
 
     // ColA algorithm
     for (int iteration = 0; iteration < e; iteration++) {
-        C = new DenseMatrixFrag(n, pad_size, myRank, numProcesses, 0);  // seed is 0, so matrix is all zeros
-        for (int round=1; round<=numProcesses; round++) {
+        C = new DenseMatrixFrag(n, pad_size, firstColIdxIncl, lastColIdxExcl);  // seed is 0, so matrix is all zeros
+        for (int round=1; round<=groupSize; round++) {
             multiplyColA(A, B, C);
-            A = shiftColA(A, myRank, numProcesses, round);
+
+            A = shiftColA(A, myRank, numProcesses, round, c);
         }
         delete(B);
         B = C;

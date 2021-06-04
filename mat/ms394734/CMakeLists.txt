@@ -12,6 +12,8 @@ add_executable(generator
 add_executable(matrixmul
         densematgen.cpp
         densematgen.h
+        utils.cpp
+        utils.h
         matrixmul.cpp)
 
 # add_executable(generator_all
