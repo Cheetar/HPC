@@ -19,4 +19,12 @@ add_executable(matrixmul
 #         densematgen.h
 #         generator_all.cpp)
 
+# OpenMP
+#find_package(OpenMP)
+#if(OpenMP_CXX_FOUND)
+#	target_link_libraries(MIMUW-matgen PUBLIC OpenMP::OpenMP_CXX)
+#endif()
 
+# MPI
+find_package(MPI REQUIRED)
+target_link_libraries(matrixmul PUBLIC MPI::MPI_CXX)

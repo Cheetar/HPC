@@ -9,6 +9,7 @@
 #include <fstream>
 #include "densematgen.h"
 #include <vector>
+#include <cstdlib>
 
 const static bool DEBUG = true;
 const static int ROOT_PROCESS = 0;
@@ -52,10 +53,27 @@ class SparseMatrixFrag{
             this->lastColIdxExcl = lastColIdxExcl;
         }
 
+        SparseMatrixFrag(int n, int firstColIdxIncl, int lastColIdxExcl) {
+            // Create empty sparse matrix
+            this->n = n;
+            this->numElems = 0;
+            this->firstColIdxIncl = firstColIdxIncl;
+            this->lastColIdxExcl = lastColIdxExcl;
+
+            this->rowIdx = new int[n+1];
+
+            for (int row=0; row<n+1; row++)
+                this->rowIdx[row] = 0; 
+        }
+
         ~SparseMatrixFrag() {
-            delete(this->values);
-            delete(this->rowIdx);
-            delete(this->colIdx);
+            if (this->numElems > 0) {
+                // TODO delete(this->values);
+                // TODO delete(this->rowIdx);
+                // TODO delete(this->colIdx);
+            } else {
+                // TODO delete(this->rowIdx);
+            }
         }
 
         std::vector<SparseMatrixFrag*> chunk(int numChunks) {
@@ -120,6 +138,7 @@ class DenseMatrixFrag{
         double* data;  // Data aligned by columns i.e. first n entries represent first column
 
         DenseMatrixFrag(int n, int firstColIdxIncl, int lastColIdxExcl) {
+            // Create empty dense matrix
             this->n = n;
             this->firstColIdxIncl = firstColIdxIncl;
             this->lastColIdxExcl = lastColIdxExcl;
@@ -144,7 +163,7 @@ class DenseMatrixFrag{
         }
 
         ~DenseMatrixFrag() {
-            delete(this->data);
+            // TODO delete(this->data);
         }
 
         void add(int row, int col, double val) {
@@ -169,6 +188,7 @@ class DenseMatrixFrag{
         }
 
         void printout() {
+            std::cout << this->n << " " << this->n << std::endl;
             for (int row=0; row<this->n; row++) {
                 for (int col = this->firstColIdxIncl; col<lastColIdxExcl; col++) {
                     int local_col = col - this->firstColIdxIncl;
@@ -193,32 +213,48 @@ class DenseMatrixFrag{
 };
 
 void multiplyColA(SparseMatrixFrag* A, DenseMatrixFrag* B, DenseMatrixFrag* C) {
-    for (int row=0; row<A->n; row++) {
-        int curRow = A->rowIdx[row];
-        int nextRow = A->rowIdx[row + 1];
-        for (int col=B->firstColIdxIncl; col<B->lastColIdxExcl; col++) {
-            double val = 0;
-            for (int j=curRow; j<nextRow; j++) {
-                int elemCol = A->colIdx[j];
+    if (A->numElems > 0) {
+        for (int row=0; row<A->n; row++) {
+            int curRow = A->rowIdx[row];
+            int nextRow = A->rowIdx[row + 1];
+            for (int col=B->firstColIdxIncl; col<B->lastColIdxExcl; col++) {
+                double val = 0;
+                for (int j=curRow; j<nextRow; j++) {
+                    int elemCol = A->colIdx[j];
 
-                double A_val = A->values[j];
-                double B_val = B->get(elemCol, col);
-                val += A_val * B_val;
+                    double A_val = A->values[j];
+                    double B_val = B->get(elemCol, col);
+                    val += A_val * B_val;
+                }
+                C->add(row, col, val);
             }
-            C->add(row, col, val);
         }
     }
 }
 
-void shiftColA(SparseMatrixFrag* A, int myRank, int numProcesses, int round) {
-    
+SparseMatrixFrag* shiftColA(SparseMatrixFrag* A, int myRank, int numProcesses, int round) {
+    int n = A->n;
+    int chunkNumElems;
+    int firstColIdxIncl = getFirstColIdxIncl(myRank, numProcesses, n, round);
+    int lastColIdxExcl = getLastColIdxExcl(myRank, numProcesses, n, round);
     int prevProcessNo = myRank > 0 ? myRank - 1 : numProcesses - 1;
     int nextProcessNo = myRank < numProcesses - 1 ? myRank + 1 : 0;
-    int n = A->n;
+    double* values;
+    int* rowIdx;
+    int* colIdx;
 
-    MPI_Request requests[8];
-    MPI_Status statuses[8];
+    MPI_Request requestsChunkSize[2];
+    MPI_Status statusesChunkSize[2];
 
+    MPI_Request requestsRecv[3];
+    MPI_Status statusesRecv[3];
+
+    MPI_Request requestsSend[3];
+    MPI_Status statusesSend[3];
+
+    assert(A->numElems >= 0);
+
+    // Share chunk size with next neighbour
     MPI_Isend(
         &A->numElems,
         1,
@@ -226,39 +262,8 @@ void shiftColA(SparseMatrixFrag* A, int myRank, int numProcesses, int round) {
         nextProcessNo,
         TAG,
         MPI_COMM_WORLD,
-        &requests[0]
+        &requestsChunkSize[0]
     );
-    MPI_Isend(
-        A->values,
-        A->numElems,
-        MPI_DOUBLE,
-        nextProcessNo,
-        TAG,
-        MPI_COMM_WORLD,
-        &requests[1]
-    );
-    MPI_Isend(
-        A->rowIdx,
-        n + 1,
-        MPI_INT,
-        nextProcessNo,
-        TAG,
-        MPI_COMM_WORLD,
-        &requests[2]
-    );
-    MPI_Isend(
-        A->colIdx,
-        A->numElems,
-        MPI_INT,
-        nextProcessNo,
-        TAG,
-        MPI_COMM_WORLD,
-        &requests[3]
-    );
-
-
-    // Receive
-    int chunkNumElems;
     MPI_Irecv(
         &chunkNumElems,
         1,
@@ -266,50 +271,87 @@ void shiftColA(SparseMatrixFrag* A, int myRank, int numProcesses, int round) {
         prevProcessNo,
         TAG,
         MPI_COMM_WORLD,
-        &requests[4]
+        &requestsChunkSize[1]
     );
-    MPI_Wait(&requests[4], &statuses[4]);
+    MPI_Waitall(2, requestsChunkSize, statusesChunkSize);
 
-    double* values = new double[chunkNumElems];
-    int* rowIdx = new int[A->n + 1];
-    int* colIdx = new int[chunkNumElems];
+    // Receive chunk
+    if (chunkNumElems > 0) {
+        values = new double[chunkNumElems];
+        rowIdx = new int[n + 1];
+        colIdx = new int[chunkNumElems];
 
-    MPI_Irecv(
-        values,
-        chunkNumElems,
-        MPI_DOUBLE,
-        prevProcessNo,
-        TAG,
-        MPI_COMM_WORLD,
-        &requests[5]
-    );
-    MPI_Irecv(
-        rowIdx,
-        n + 1,
-        MPI_INT,
-        prevProcessNo,
-        TAG,
-        MPI_COMM_WORLD,
-        &requests[6]
-    );
-    MPI_Irecv(
-        colIdx,
-        chunkNumElems,
-        MPI_INT,
-        prevProcessNo,
-        TAG,
-        MPI_COMM_WORLD,
-        &requests[7]
-    );
+        MPI_Irecv(
+            values,
+            chunkNumElems,
+            MPI_DOUBLE,
+            prevProcessNo,
+            TAG,
+            MPI_COMM_WORLD,
+            &requestsRecv[0]
+        );
+        MPI_Irecv(
+            rowIdx,
+            n + 1,
+            MPI_INT,
+            prevProcessNo,
+            TAG,
+            MPI_COMM_WORLD,
+            &requestsRecv[1]
+        );
+        MPI_Irecv(
+            colIdx,
+            chunkNumElems,
+            MPI_INT,
+            prevProcessNo,
+            TAG,
+            MPI_COMM_WORLD,
+            &requestsRecv[2]
+        );
+    }
 
-    // Delete old chunk of data
-    int firstColIdxIncl = getFirstColIdxIncl(myRank, numProcesses, n, round);
-    int lastColIdxExcl = getLastColIdxExcl(myRank, numProcesses, n, round);
+    // Send chunk
+    if (A->numElems > 0) {
+        MPI_Isend(
+            A->values,
+            A->numElems,
+            MPI_DOUBLE,
+            nextProcessNo,
+            TAG,
+            MPI_COMM_WORLD,
+            &requestsSend[0]
+        );
+        MPI_Isend(
+            A->rowIdx,
+            n + 1,
+            MPI_INT,
+            nextProcessNo,
+            TAG,
+            MPI_COMM_WORLD,
+            &requestsSend[1]
+        );
+        MPI_Isend(
+            A->colIdx,
+            A->numElems,
+            MPI_INT,
+            nextProcessNo,
+            TAG,
+            MPI_COMM_WORLD,
+            &requestsSend[2]
+        );
+    }
 
-    // Create a new chunk
-    MPI_Waitall(8, requests, statuses);
-    delete A;
-    A = new SparseMatrixFrag(n, chunkNumElems, values, rowIdx, colIdx, firstColIdxIncl, lastColIdxExcl);
+    if (chunkNumElems > 0)
+        MPI_Waitall(3, requestsRecv, statusesRecv);
+    if (A->numElems > 0)
+        MPI_Waitall(3, requestsSend, statusesSend);
+
+    delete(A);
+    if (chunkNumElems > 0)
+        A = new SparseMatrixFrag(n, chunkNumElems, values, rowIdx, colIdx, firstColIdxIncl, lastColIdxExcl);
+    else 
+        A = new SparseMatrixFrag(n, firstColIdxIncl, lastColIdxExcl);
+    return A;
 }
 
 DenseMatrixFrag* gatherResult(int myRank, int numProcesses, DenseMatrixFrag* C) {
@@ -343,6 +385,8 @@ DenseMatrixFrag* gatherResult(int myRank, int numProcesses, DenseMatrixFrag* C) 
         return whole_C;
     } else {
         MPI_Request request;
+        assert(C->numElems > 0);
+
         MPI_Isend(
             C->data,
             C->numElems,
@@ -352,6 +396,7 @@ DenseMatrixFrag* gatherResult(int myRank, int numProcesses, DenseMatrixFrag* C) 
             MPI_COMM_WORLD,
             &request
         );
+
         return nullptr;
     }
 }
@@ -375,6 +420,45 @@ int main(int argc, char * argv[]) {
     MPI_Init(&argc, &argv);
     MPI_Comm_size(MPI_COMM_WORLD, &numProcesses);
     MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
+
+    //For debugging purposes
+/*
+    int *buf_send = new int[1];
+    int *buf_recv = new int[1];
+    buf_send[0] = 42;
+    buf_recv[0] = 42;
+
+    MPI_Request requests[2];
+    MPI_Status statuses[2];
+
+    if (myRank == 0) {
+        MPI_Isend(
+            buf_send,
+            1,
+            MPI_INT,
+            1,
+            TAG,
+            MPI_COMM_WORLD,
+            &requests[0]
+        );
+
+        MPI_Waitall(1, requests, statuses);
+    } else if (myRank == 1) {
+        MPI_Irecv(
+            buf_recv,
+            1,
+            MPI_INT,
+            0,
+            TAG,
+            MPI_COMM_WORLD,
+            &requests[0]
+        );
+
+        MPI_Waitall(1, requests, statuses);
+    }
+    MPI_Finalize();
+    std::exit(0);
+*/
 
     /* Read program arguments */
     // Order of arguments is important!
@@ -446,6 +530,7 @@ int main(int argc, char * argv[]) {
         MPI_COMM_WORLD
     );
 
+    assert (n > 0);
     assert (numProcesses <= n);
 
     // Distribute chunks of A over all processes
@@ -464,39 +549,45 @@ int main(int argc, char * argv[]) {
                 TAG,
                 MPI_COMM_WORLD
             );
-            MPI_Send(
-                chunk->values,
-                chunkNumElems,
-                MPI_DOUBLE,
-                processNum,
-                TAG,
-                MPI_COMM_WORLD
-            );
-            MPI_Send(
-                chunk->rowIdx,
-                n+1,
-                MPI_INT,
-                processNum,
-                TAG,
-                MPI_COMM_WORLD
-            );
-            MPI_Send(
-                chunk->colIdx,
-                chunkNumElems,
-                MPI_INT,
-                processNum,
-                TAG,
-                MPI_COMM_WORLD
-            );
 
+            /*if (chunkNumElems >= sizeof(size_t)) {
+                std::cout << "chunkNumElems (" << chunkNumElems << ") >= sizeof(size_t) (" << sizeof(size_t) << ")" << std::endl;
+            }*/
+
+            if (chunkNumElems > 0) {
+                MPI_Send(
+                    chunk->values,
+                    chunkNumElems,
+                    MPI_DOUBLE,
+                    processNum,
+                    TAG,
+                    MPI_COMM_WORLD
+                );
+                MPI_Send(
+                    chunk->rowIdx,
+                    n+1,
+                    MPI_INT,
+                    processNum,
+                    TAG,
+                    MPI_COMM_WORLD
+                );
+                MPI_Send(
+                    chunk->colIdx,
+                    chunkNumElems,
+                    MPI_INT,
+                    processNum,
+                    TAG,
+                    MPI_COMM_WORLD
+                );
+            }
             // ROOT process no longer needs to store chunks of processes after it was sent
-            delete(chunk);
+            // TODO delete(chunk);
         }
 
         // Initialize chunk of ROOT process
         A = chunks[0];
         // ROOT process no longer needs to store the whole matrix A
-        delete(whole_A);
+        // TODO delete(whole_A);
     } else {
         MPI_Recv(
             &chunkNumElems,
@@ -508,42 +599,52 @@ int main(int argc, char * argv[]) {
             &status
         );
 
-        double* values = new double[chunkNumElems];
-        int* rowIdx = new int[n + 1];
-        int* colIdx = new int[chunkNumElems];
-
-        MPI_Recv(
-            values,
-            chunkNumElems,
-            MPI_DOUBLE,
-            ROOT_PROCESS,
-            TAG,
-            MPI_COMM_WORLD,
-            &status
-        );
-        MPI_Recv(
-            rowIdx,
-            n+1,
-            MPI_INT,
-            ROOT_PROCESS,
-            TAG,
-            MPI_COMM_WORLD,
-            &status
-        );
-        MPI_Recv(
-            colIdx,
-            chunkNumElems,
-            MPI_INT,
-            ROOT_PROCESS,
-            TAG,
-            MPI_COMM_WORLD,
-            &status
-        ); 
-
         int firstColIdxIncl = getFirstColIdxIncl(myRank, numProcesses, n);
         int lastColIdxExcl = getLastColIdxExcl(myRank, numProcesses, n);
-        A = new SparseMatrixFrag(n, chunkNumElems, values, rowIdx, colIdx, firstColIdxIncl, lastColIdxExcl);
+
+        if (chunkNumElems > 0) {
+            double* values = new double[chunkNumElems];
+            int* rowIdx = new int[n + 1];
+            int* colIdx = new int[chunkNumElems];
+
+            MPI_Recv(
+                values,
+                chunkNumElems,
+                MPI_DOUBLE,
+                ROOT_PROCESS,
+                TAG,
+                MPI_COMM_WORLD,
+                &status
+            );
+            MPI_Recv(
+                rowIdx,
+                n+1,
+                MPI_INT,
+                ROOT_PROCESS,
+                TAG,
+                MPI_COMM_WORLD,
+                &status
+            );
+            MPI_Recv(
+                colIdx,
+                chunkNumElems,
+                MPI_INT,
+                ROOT_PROCESS,
+                TAG,
+                MPI_COMM_WORLD,
+                &status
+            ); 
+
+            A = new SparseMatrixFrag(n, chunkNumElems, values, rowIdx, colIdx, firstColIdxIncl, lastColIdxExcl);
+        }
+        else {
+            // Create empty matrix
+            A = new SparseMatrixFrag(n, firstColIdxIncl, lastColIdxExcl);
+        }
     }
+
+    //std::cout << "MyRank: " << myRank << std::endl;
+    //A->printout();
 
     // TODO for simpicity, later pad with zeros
     assert(n % numProcesses == 0);
@@ -556,12 +657,19 @@ int main(int argc, char * argv[]) {
         C = new DenseMatrixFrag(n, myRank, numProcesses, 0);  // seed is 0, so matrix is all zeros
         for (int round=1; round<=numProcesses; round++) {
             multiplyColA(A, B, C);
-            shiftColA(A, myRank, numProcesses, round);
+            A = shiftColA(A, myRank, numProcesses, round);
+            /*if (myRank == 0) {
+                std::cout << "MyRank: " << myRank << " (round " << round << ")" << std::endl;
+                A->printout();
+            }*/
         }
-        delete(B);
+        // TODO delete(B);
         B = C;
     }
     
+    //std::cout << "MyRank: " << myRank << std::endl;
+    //A->printout();
+
     // Show result
     whole_C = gatherResult(myRank, numProcesses, C);
     if (myRank == ROOT_PROCESS) {
@@ -572,10 +680,10 @@ int main(int argc, char * argv[]) {
     }
     
     // Clean up
-    delete(A);
-    delete(C);
+    /*// TODO delete(A);
+    // TODO delete(B);
     if (myRank == ROOT_PROCESS)
-        delete(whole_C);
+        // TODO delete(whole_C);*/
     MPI_Finalize();
     return 0;
 }
