@@ -310,7 +310,7 @@ void colA(char* sparse_matrix_file, int seed, int c, int e, bool g, double g_val
         // Delete temporary chunks and buffers
         for (size_t i=1; i<chunks.size(); i++) {
             delete(chunks[i]);
-            delete[](buffers[i]);
+            delete[](buffers[i - 1]);
         }
         // ROOT process no longer needs to store the whole matrix A
         delete(whole_A);
