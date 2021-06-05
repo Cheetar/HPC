@@ -34,6 +34,7 @@ int getChunkSize(int *cache, int chunkNum) {
 
 int getChunkNumber(int myRank, int numProcesses, int round, int c) {
     int groupSize = numProcesses/c;
+    assert (round <= groupSize);
     // (+ groupSize) is to avoid negative values in modulo
     return ((myRank % groupSize) - round + groupSize) % groupSize;
 }
