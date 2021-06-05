@@ -5,6 +5,9 @@ int calcFirstColIdxIncl(int myRank, int numProcesses, int n);
 int getFirstColIdxIncl(int myRank, int numProcesses, int n, int round=0, int c=1);
 int getLastColIdxExcl(int myRank, int numProcesses, int n, int round=0, int c=1);
 
+int getChunkSize(int *cache, int chunkNum);
+int getChunkNumber(int myRank, int numProcesses, int round=0, int c=1);
+
 class SparseMatrixFrag {
     public:
         int n;
@@ -59,7 +62,7 @@ class DenseMatrixFrag{
         int lastColIdxExcl;
         double* data;  // Data aligned by columns i.e. first n entries represent first column
 
-        DenseMatrixFrag(int n, int pad_size, int firstColIdxIncl, int lastColIdxExcl, int seed=0);
+        DenseMatrixFrag(int n, int pad_size, int firstColIdxIncl, int lastColIdxExcl, int seed=0, bool initialize=true);
 
         ~DenseMatrixFrag();
 

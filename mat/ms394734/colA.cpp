@@ -18,11 +18,14 @@ const static int TAG = 13;
 
 void multiplyColA(SparseMatrixFrag* A, DenseMatrixFrag* B, DenseMatrixFrag* C) {
     if (A->numElems > 0) {
+        int curRow, nextRow;
+        double val;
+        # pragma omp for collapse(2)
         for (int row=0; row<A->n; row++) {
-            int curRow = A->rowIdx[row];
-            int nextRow = A->rowIdx[row + 1];
             for (int col=B->firstColIdxIncl; col<B->lastColIdxExcl; col++) {
-                double val = 0;
+                curRow = A->rowIdx[row];
+                nextRow = A->rowIdx[row + 1];
+                val = 0;
                 for (int j=curRow; j<nextRow; j++) {
                     int elemCol = A->colIdx[j];
 
@@ -36,10 +39,10 @@ void multiplyColA(SparseMatrixFrag* A, DenseMatrixFrag* B, DenseMatrixFrag* C) {
     }
 }
 
-SparseMatrixFrag* shiftColA(SparseMatrixFrag* A, int myRank, int numProcesses, int round, int c) {
+SparseMatrixFrag* shiftColA(SparseMatrixFrag* A, int* cache, int myRank, int numProcesses, int round, int c) {
     int n = A->n;
     int pad_size = A->pad_size;
-    int chunkNumElems;
+    int chunkNumElems, chunkNum;
     int firstColIdxIncl = getFirstColIdxIncl(myRank, numProcesses, n, round, c);
     int lastColIdxExcl = getLastColIdxExcl(myRank, numProcesses, n, round, c);
     int groupSize = numProcesses/c;
@@ -51,9 +54,6 @@ SparseMatrixFrag* shiftColA(SparseMatrixFrag* A, int myRank, int numProcesses, i
     int* rowIdx;
     int* colIdx;
 
-    MPI_Request requestsChunkSize[2];
-    MPI_Status statusesChunkSize[2];
-
     MPI_Request requestsRecv[3];
     MPI_Status statusesRecv[3];
 
@@ -62,26 +62,8 @@ SparseMatrixFrag* shiftColA(SparseMatrixFrag* A, int myRank, int numProcesses, i
 
     assert(A->numElems >= 0);
 
-    // Share chunk size with next neighbour
-    MPI_Isend(
-        &A->numElems,
-        1,
-        MPI_INT,
-        nextProcessNo,
-        TAG,
-        MPI_COMM_WORLD,
-        &requestsChunkSize[0]
-    );
-    MPI_Irecv(
-        &chunkNumElems,
-        1,
-        MPI_INT,
-        prevProcessNo,
-        TAG,
-        MPI_COMM_WORLD,
-        &requestsChunkSize[1]
-    );
-    MPI_Waitall(2, requestsChunkSize, statusesChunkSize);
+    chunkNum = getChunkNumber(myRank, numProcesses, round, c);
+    chunkNumElems = getChunkSize(cache, chunkNum);
 
     // Receive chunk
     if (chunkNumElems > 0) {
@@ -191,7 +173,7 @@ DenseMatrixFrag* gatherResultColA(int myRank, int numProcesses, DenseMatrixFrag*
         MPI_Waitall(numProcesses - 1, requests, statuses);
 
         // seed is 0, so matrix is empty (filled with zeros)
-        DenseMatrixFrag* whole_C = new DenseMatrixFrag(C->n, C->pad_size, 0 /*firstColIdxIncl*/, C->n /*lastColIdxExcl*/); 
+        DenseMatrixFrag* whole_C = new DenseMatrixFrag(C->n, C->pad_size, 0 /*firstColIdxIncl*/, C->n /*lastColIdxExcl*/, 0 /*seed*/, false /*dont initialize array*/); 
         // Marge chunks into one final matrix
         for (int i=0; i<numProcesses; i++)
             whole_C->addChunk(chunks[i]);
@@ -215,7 +197,7 @@ DenseMatrixFrag* gatherResultColA(int myRank, int numProcesses, DenseMatrixFrag*
 }
 
 void colA(char* sparse_matrix_file, int seed, int c, int e, bool g, double g_val, bool verbose, int myRank, int numProcesses) {
-    int pad_size, chunkNumElems, org_n, n, firstColIdxIncl, lastColIdxExcl;
+    int pad_size, chunkNumElems, org_n, n, firstColIdxIncl, lastColIdxExcl, chunkNum;
 
     MPI_Status status;
     SparseMatrixFrag* A;
@@ -223,6 +205,10 @@ void colA(char* sparse_matrix_file, int seed, int c, int e, bool g, double g_val
     DenseMatrixFrag* B;
     DenseMatrixFrag* C;
     DenseMatrixFrag* whole_C;
+
+    std::vector<SparseMatrixFrag*> chunks;
+
+    int groupSize = numProcesses/c;
 
     // Root process reads sparse matrix A
     if (myRank == ROOT_PROCESS) {
@@ -258,49 +244,49 @@ void colA(char* sparse_matrix_file, int seed, int c, int e, bool g, double g_val
         ReadFile.close();
 
         whole_A = new SparseMatrixFrag(n, pad_size, elems, values, rowIdx, colIdx, 0, n);
-    } 
+        chunks = whole_A->chunk(groupSize);
+    }
 
-    // Broadcast matrix size
+    /* Cache content:
+        0 - n
+        1 - pad_size
+        [2; groupSize + 2) - number of elements in each chunk
+
+        BTW groupSize is equal to number of chunks
+    */
+    
+    int *cache = new int[groupSize + 2];
+    if (myRank == ROOT_PROCESS) {
+        cache[0] = n;
+        cache[1] = pad_size;
+        for (int i=0; i < groupSize; i++)
+            cache[i + 2] = chunks[i]->numElems;
+    }
+
+    // Broadcast cache
     MPI_Bcast(
-        &n,
-        1,
+        cache,
+        groupSize + 2,
         MPI_INT,
         ROOT_PROCESS,
         MPI_COMM_WORLD
     );
 
-    // Broadcast padding size
-    MPI_Bcast(
-        &pad_size,
-        1,
-        MPI_INT,
-        ROOT_PROCESS,
-        MPI_COMM_WORLD
-    );
+    n = cache[0];
+    pad_size = cache[1];
 
     assert (n > 0);
     assert (pad_size >= 0);
     assert (numProcesses <= n);
     assert (n % numProcesses == 0);  // Check if we padded the matrix correctly
 
-    int groupSize = numProcesses/c;
-
     // Distribute chunks of A over all processes
     if (myRank == ROOT_PROCESS) {
-        std::vector<SparseMatrixFrag*> chunks = whole_A->chunk(groupSize);
         for (int processNum=1; processNum<numProcesses; processNum++){
             SparseMatrixFrag* chunk = chunks[processNum%groupSize];
             chunkNumElems = chunk->numElems;
 
-            // Send number of elements in a chunk 
-            MPI_Send(
-                &chunkNumElems,
-                1,
-                MPI_INT,
-                processNum,
-                TAG,
-                MPI_COMM_WORLD
-            );
+            //int *buf = new int[3 * chunkNumElems + (n + 1)] 
 
             if (chunkNumElems > 0) {
                 MPI_Send(
@@ -339,15 +325,8 @@ void colA(char* sparse_matrix_file, int seed, int c, int e, bool g, double g_val
         // ROOT process no longer needs to store the whole matrix A
         delete(whole_A);
     } else {
-        MPI_Recv(
-            &chunkNumElems,
-            1,
-            MPI_INT,
-            ROOT_PROCESS,
-            TAG,
-            MPI_COMM_WORLD,
-            &status
-        );
+        chunkNum = myRank % groupSize;
+        chunkNumElems = getChunkSize(cache, chunkNum);
 
         int firstColIdxIncl = getFirstColIdxIncl(myRank, numProcesses, n, 0 /*round*/, c);
         int lastColIdxExcl = getLastColIdxExcl(myRank, numProcesses, n, 0 /*round*/, c);
@@ -404,7 +383,7 @@ void colA(char* sparse_matrix_file, int seed, int c, int e, bool g, double g_val
         for (int round=1; round<=groupSize; round++) {
             multiplyColA(A, B, C);
 
-            A = shiftColA(A, myRank, numProcesses, round, c);
+            A = shiftColA(A, cache, myRank, numProcesses, round, c);
         }
         delete(B);
         B = C;

@@ -12,11 +12,8 @@
 #include <cstdlib>
 #include "utils.h"
 #include "colA.h"
+#include "innerABC.h"
 
-
-void innerABC(char* sparse_matrix_file, int seed, int c, int e, bool g, double g_val, bool verbose, int myRank, int numProcesses) {
-
-}
 
 int main(int argc, char * argv[]) {
     int numProcesses, myRank, seed, c, e;
@@ -30,6 +27,59 @@ int main(int argc, char * argv[]) {
     MPI_Init(&argc, &argv);
     MPI_Comm_size(MPI_COMM_WORLD, &numProcesses);
     MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
+
+/*
+    int *a = new int[2];
+    double *b = new double[2];
+
+    if (myRank == 0) {
+        a[0] = 0;
+        a[1] = 1;
+        b[0] = 0.1;
+        b[1] = 0.2;
+    }
+
+    const int blockLengths[2] = {2, 2};
+    const MPI_Aint array_of_displacements[2] = {static_cast<MPI_Aint>(0), static_cast<MPI_Aint>(2 * sizeof(MPI_INT))};
+    MPI_Datatype newtype;
+    const MPI_Datatype array_of_types[2] = {MPI_INT, MPI_DOUBLE};
+
+    MPI_Type_create_struct(
+        2,
+        blockLengths,
+        array_of_displacements,
+        array_of_types,
+        &newtype
+    );
+    MPI_Type_commit(&newtype);
+    
+    MPI_Status status;
+
+    if (myRank == 0) {
+        MPI_Send(
+            b,
+            4,
+            MPI_INT,
+            1,
+            13,
+            MPI_COMM_WORLD
+        );
+    } else if (myRank == 1) {
+        MPI_Recv(
+            b,
+            4,
+            MPI_INT,
+            0,
+            13,
+            MPI_COMM_WORLD,
+            &status
+        );
+        std::cout << b[0] << " " << b[1] << std::endl;
+    }
+
+    MPI_Finalize();
+    return 0;
+    */
 
     /* Read program arguments */
     // Order of arguments is important!

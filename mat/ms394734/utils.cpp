@@ -28,6 +28,16 @@ int getLastColIdxExcl(int myRank, int numProcesses, int n, int round, int c) {
     return calcFirstColIdxIncl(((groupRank + round) % groupSize) + 1, groupSize, n);
 }
 
+int getChunkSize(int *cache, int chunkNum) {
+    return cache[chunkNum + 2];
+}
+
+int getChunkNumber(int myRank, int numProcesses, int round, int c) {
+    int groupSize = numProcesses/c;
+    // (+ groupSize) is to avoid negative values in modulo
+    return ((myRank % groupSize) - round + groupSize) % groupSize;
+}
+
 
 SparseMatrixFrag::SparseMatrixFrag(int n, int pad_size, int numElems, double* values, int* rowIdx, int* colIdx, int firstColIdxIncl, int lastColIdxExcl) {
     this->n = n;
@@ -206,20 +216,22 @@ void SparseMatrixFragByRow::printout() {
 }
 
 
-DenseMatrixFrag::DenseMatrixFrag(int n, int pad_size, int firstColIdxIncl, int lastColIdxExcl, int seed) {
+DenseMatrixFrag::DenseMatrixFrag(int n, int pad_size, int firstColIdxIncl, int lastColIdxExcl, int seed, bool initialize) {
     this->n = n;
     this->pad_size = pad_size;
     this->firstColIdxIncl = firstColIdxIncl;
     this->lastColIdxExcl = lastColIdxExcl;
     this->numElems = n*(lastColIdxExcl - firstColIdxIncl);
     this->data = new double[n*(lastColIdxExcl - firstColIdxIncl)];
-    for (int global_col=this->firstColIdxIncl; global_col<this->lastColIdxExcl; global_col++) {
-        for (int row=0; row<n; row++) {
-            int local_col = global_col - this->firstColIdxIncl;
-            if (row >= (n - pad_size) || global_col >= (n- pad_size))
-                this->data[local_col*n + row] = 0;
-            else
-                this->data[local_col*n + row] = generate_double(seed, row, global_col);
+    if (initialize) {
+        for (int global_col=this->firstColIdxIncl; global_col<this->lastColIdxExcl; global_col++) {
+            for (int row=0; row<n; row++) {
+                int local_col = global_col - this->firstColIdxIncl;
+                if (row >= (n - pad_size) || global_col >= (n- pad_size))
+                    this->data[local_col*n + row] = 0;
+                else
+                    this->data[local_col*n + row] = generate_double(seed, row, global_col);
+            }
         }
     }
 }
@@ -241,12 +253,18 @@ double DenseMatrixFrag::get(int row, int col) {
 }
 
 void DenseMatrixFrag::addChunk(DenseMatrixFrag* chunk) {
+    assert (chunk->firstColIdxIncl >= this->firstColIdxIncl);
+    assert (chunk->lastColIdxExcl <= this->lastColIdxExcl);
+    // Optimalized data copying
+    int offset = this->n * (chunk->firstColIdxIncl - this->firstColIdxIncl);
+    std::copy(&(chunk->data[0]), &(chunk->data[chunk->numElems]), &(this->data[offset]));
+    /* Old version:
     for (int col=chunk->firstColIdxIncl; col < chunk->lastColIdxExcl; col++) {
         for (int row=0; row<this->n; row++) {
             double val = chunk->get(row, col);
             this->add(row, col, val);
         }
-    }
+    }*/
 }
 
 void DenseMatrixFrag::printout() {

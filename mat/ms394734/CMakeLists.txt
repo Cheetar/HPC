@@ -16,6 +16,8 @@ add_executable(matrixmul
         utils.h
         colA.cpp
         colA.h
+        innerABC.cpp
+        innerABC.h
         matrixmul.cpp)
 
 # add_executable(generator_all
@@ -24,10 +26,10 @@ add_executable(matrixmul
 #         generator_all.cpp)
 
 # OpenMP
-#find_package(OpenMP)
-#if(OpenMP_CXX_FOUND)
-#	target_link_libraries(MIMUW-matgen PUBLIC OpenMP::OpenMP_CXX)
-#endif()
+find_package(OpenMP)
+if(OpenMP_CXX_FOUND)
+	target_link_libraries(matrixmul PUBLIC OpenMP::OpenMP_CXX)
+endif()
 
 # MPI
 find_package(MPI REQUIRED)
