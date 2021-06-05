@@ -301,15 +301,16 @@ void colA(char* sparse_matrix_file, int seed, int c, int e, bool g, double g_val
             }
         }
 
-        MPI_Waitall(numMessagesSent, requests[0], statuses[0]);
-
+        for (int i=0; i<numMessagesSent; i++)
+            MPI_Wait(requests[i], statuses[i]);
+        
         // Initialize chunk of ROOT process
         A = chunks[0];
         
         // Delete temporary chunks and buffers
         for (size_t i=1; i<chunks.size(); i++) {
             delete(chunks[i]);
-            // TODO delete[](buffers[i]);
+            delete[](buffers[i]);
         }
         // ROOT process no longer needs to store the whole matrix A
         delete(whole_A);
@@ -346,8 +347,7 @@ void colA(char* sparse_matrix_file, int seed, int c, int e, bool g, double g_val
             memcpy(colIdx, &buf[2 * chunkNumElems], sizeof(int) * chunkNumElems);
             memcpy(rowIdx, &buf[3 * chunkNumElems], sizeof(int) * (n + 1));
 
-            // TODO delete buf;
-
+            delete[] buf;
             A = new SparseMatrixFrag(n, pad_size, chunkNumElems, values, rowIdx, colIdx, firstColIdxIncl, lastColIdxExcl);
         }
         else {
@@ -355,9 +355,6 @@ void colA(char* sparse_matrix_file, int seed, int c, int e, bool g, double g_val
             A = new SparseMatrixFrag(n, pad_size, firstColIdxIncl, lastColIdxExcl);
         }
     }
-
-    MPI_Finalize();
-    return;
 
     // Generate fragment of dense matrix
     firstColIdxIncl = getFirstColIdxIncl(myRank, numProcesses, n);
