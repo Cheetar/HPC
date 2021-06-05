@@ -180,9 +180,9 @@ DenseMatrixFrag* gatherResultColA(int myRank, int numProcesses, DenseMatrixFrag*
 }
 
 void colA(char* sparse_matrix_file, int seed, int c, int e, bool g, double g_val, bool verbose, int myRank, int numProcesses) {
-    int pad_size, chunkNumElems, org_n, n, firstColIdxIncl, lastColIdxExcl, chunkNum;
+    int pad_size, chunkNumElems, org_n, n, firstColIdxIncl, lastColIdxExcl, chunkNum, bufSize;
+    int* buf;
 
-    MPI_Status status;
     SparseMatrixFrag* A;
     SparseMatrixFrag* whole_A;
     DenseMatrixFrag* B;
@@ -192,7 +192,7 @@ void colA(char* sparse_matrix_file, int seed, int c, int e, bool g, double g_val
     std::vector<SparseMatrixFrag*> chunks;
 
     int groupSize = numProcesses/c;
-
+    
     // Root process reads sparse matrix A
     if (myRank == ROOT_PROCESS) {
         // Read matrix from file
@@ -265,38 +265,52 @@ void colA(char* sparse_matrix_file, int seed, int c, int e, bool g, double g_val
 
     // Distribute chunks of A over all processes
     if (myRank == ROOT_PROCESS) {
+        std::vector<MPI_Request*> requests;
+        std::vector<MPI_Status*> statuses;
+        std::vector<int*> buffers;
+        int numMessagesSent = 0;
+
         for (int processNum=1; processNum<numProcesses; processNum++){
             SparseMatrixFrag* chunk = chunks[processNum%groupSize];
             chunkNumElems = chunk->numElems;
 
             // Merge 3 messages into 1
-            int bufSize = 3 * chunkNumElems + (n + 1);
-            int *buf = new int[bufSize];
+            bufSize = 3 * chunkNumElems + (n + 1);
+            buf = new int[bufSize];
+            buffers.push_back(buf);
 
             memcpy(&buf[0], &(chunk->values[0]), 2 * sizeof(int) * chunkNumElems);
             memcpy(&buf[2 * chunkNumElems], &(chunk->colIdx[0]), sizeof(int) * chunkNumElems);
             memcpy(&buf[3 * chunkNumElems], &(chunk->rowIdx[0]), sizeof(int) * (n + 1));
 
             if (chunkNumElems > 0) {
-                MPI_Send(
+                MPI_Request *request = new MPI_Request;
+                MPI_Status *status = new MPI_Status;
+                requests.push_back(request);
+                statuses.push_back(status);
+                numMessagesSent++;
+                MPI_Isend(
                     buf,
                     bufSize,
                     MPI_INT,
                     processNum,
                     TAG,
-                    MPI_COMM_WORLD
+                    MPI_COMM_WORLD,
+                    request
                 );
             }
         }
 
-        // TODO delete buf
+        MPI_Waitall(numMessagesSent, requests[0], statuses[0]);
 
         // Initialize chunk of ROOT process
         A = chunks[0];
         
-        // Delete temporary chunks
-        for (size_t i=1; i<chunks.size(); i++)
+        // Delete temporary chunks and buffers
+        for (size_t i=1; i<chunks.size(); i++) {
             delete(chunks[i]);
+            // TODO delete[](buffers[i]);
+        }
         // ROOT process no longer needs to store the whole matrix A
         delete(whole_A);
     } else {
@@ -307,28 +321,32 @@ void colA(char* sparse_matrix_file, int seed, int c, int e, bool g, double g_val
         int lastColIdxExcl = getLastColIdxExcl(myRank, numProcesses, n, 0 /*round*/, c);
 
         if (chunkNumElems > 0) {
-            int bufSize = 3 * chunkNumElems + (n + 1);
-            int *buf = new int[bufSize];
+            MPI_Request request;
+            MPI_Status status;
+
+            bufSize = 3 * chunkNumElems + (n + 1);
+            buf = new int[bufSize];
 
             double* values = new double[chunkNumElems];
             int* rowIdx = new int[n + 1];
             int* colIdx = new int[chunkNumElems];
 
-            MPI_Recv(
+            MPI_Irecv(
                 buf,
                 bufSize,
                 MPI_INT,
                 ROOT_PROCESS,
                 TAG,
                 MPI_COMM_WORLD,
-                &status
+                &request
             ); 
 
+            MPI_Wait(&request, &status);
             memcpy(values, &buf[0], 2 * sizeof(int) * chunkNumElems);
             memcpy(colIdx, &buf[2 * chunkNumElems], sizeof(int) * chunkNumElems);
             memcpy(rowIdx, &buf[3 * chunkNumElems], sizeof(int) * (n + 1));
 
-            // TODO delete buf
+            // TODO delete buf;
 
             A = new SparseMatrixFrag(n, pad_size, chunkNumElems, values, rowIdx, colIdx, firstColIdxIncl, lastColIdxExcl);
         }
@@ -337,6 +355,9 @@ void colA(char* sparse_matrix_file, int seed, int c, int e, bool g, double g_val
             A = new SparseMatrixFrag(n, pad_size, firstColIdxIncl, lastColIdxExcl);
         }
     }
+
+    MPI_Finalize();
+    return;
 
     // Generate fragment of dense matrix
     firstColIdxIncl = getFirstColIdxIncl(myRank, numProcesses, n);
