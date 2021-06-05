@@ -2,8 +2,8 @@
 #define __MIMUW_UTILS_H__
 
 int calcFirstColIdxIncl(int myRank, int numProcesses, int n);
-int getFirstColIdxIncl(int myRank, int numProcesses, int n, int round=0, int c=1);
-int getLastColIdxExcl(int myRank, int numProcesses, int n, int round=0, int c=1);
+int getFirstColIdxIncl(int myRank, int numProcesses, int n, int round=0, int c=1, bool inner=false);
+int getLastColIdxExcl(int myRank, int numProcesses, int n, int round=0, int c=1, bool inner=false);
 
 int getChunkSize(int *cache, int chunkNum);
 int getChunkNumber(int myRank, int numProcesses, int round=0, int c=1);
@@ -70,7 +70,7 @@ class DenseMatrixFrag{
 
         double get(int row, int col);
 
-        void addChunk(DenseMatrixFrag* chunk);
+        void addChunk(DenseMatrixFrag* chunk, bool opt=true);
 
         void printout();
 

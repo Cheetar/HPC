@@ -16,15 +16,17 @@ const static int ROOT_PROCESS = 0;
 const static int TAG = 13;
 
 
-void multiplyColA(SparseMatrixFrag* A, DenseMatrixFrag* B, DenseMatrixFrag* C) {
+void multiplyInnerABC(SparseMatrixFragByRow* A, DenseMatrixFrag* B, DenseMatrixFrag* C) {
     if (A->numElems > 0) {
         int curRow, nextRow;
         double val;
-        # pragma omp for collapse(2)
-        for (int row=0; row<A->n; row++) {
+
+        // TODO # pragma omp for collapse(2)
+        for (int row=A->firstRowIdxIncl; row<A->lastRowIdxExcl; row++) {
             for (int col=B->firstColIdxIncl; col<B->lastColIdxExcl; col++) {
-                curRow = A->rowIdx[row];
-                nextRow = A->rowIdx[row + 1];
+                int local_row = row - A->firstRowIdxIncl;
+                curRow = A->rowIdx[local_row];
+                nextRow = A->rowIdx[local_row + 1];
                 val = 0;
                 for (int j=curRow; j<nextRow; j++) {
                     int elemCol = A->colIdx[j];
@@ -39,12 +41,12 @@ void multiplyColA(SparseMatrixFrag* A, DenseMatrixFrag* B, DenseMatrixFrag* C) {
     }
 }
 
-SparseMatrixFrag* shiftColA(SparseMatrixFrag* A, int* cache, int myRank, int numProcesses, int round, int c) {
+SparseMatrixFragByRow* shiftInnerABC(SparseMatrixFragByRow* A, int* cache, int myRank, int numProcesses, int round, int c) {
     int n = A->n;
     int pad_size = A->pad_size;
-    int chunkNumElems, chunkNum, bufSize;
-    int firstColIdxIncl = getFirstColIdxIncl(myRank, numProcesses, n, round, c);
-    int lastColIdxExcl = getLastColIdxExcl(myRank, numProcesses, n, round, c);
+    int chunkNumElems, chunkNum, bufSize, rowsPerChunk;
+    int firstRowIdxIncl = getFirstColIdxIncl(myRank, numProcesses, n, round, c, true);
+    int lastRowIdxExcl = getLastColIdxExcl(myRank, numProcesses, n, round, c, true);
     int groupSize = numProcesses/c;
     int groupRank = myRank % groupSize;
     int groupNumber = myRank / groupSize;
@@ -66,14 +68,15 @@ SparseMatrixFrag* shiftColA(SparseMatrixFrag* A, int* cache, int myRank, int num
 
     chunkNum = getChunkNumber(myRank, numProcesses, round, c);
     chunkNumElems = getChunkSize(cache, chunkNum);
+    rowsPerChunk = n / groupSize;
 
     // Receive chunk
     if (chunkNumElems > 0) {
         values = new double[chunkNumElems];
-        rowIdx = new int[n + 1];
+        rowIdx = new int[rowsPerChunk + 1];
         colIdx = new int[chunkNumElems];
 
-        bufSize = 3 * chunkNumElems + (n + 1);
+        bufSize = 3 * chunkNumElems + (rowsPerChunk + 1);
         buf = new int[bufSize];
 
         MPI_Irecv(
@@ -90,12 +93,12 @@ SparseMatrixFrag* shiftColA(SparseMatrixFrag* A, int* cache, int myRank, int num
     // Send chunk
     if (A->numElems > 0) {
         // Merge 3 messages into 1
-        bufSize = 3 * (A->numElems) + (n + 1);
+        bufSize = 3 * (A->numElems) + (rowsPerChunk + 1);
         bufS = new int[bufSize];
 
         memcpy(&bufS[0], &(A->values[0]), 2 * sizeof(int) * (A->numElems));
         memcpy(&bufS[2 * (A->numElems)], &(A->colIdx[0]), sizeof(int) * (A->numElems));
-        memcpy(&bufS[3 * (A->numElems)], &(A->rowIdx[0]), sizeof(int) * (n + 1));
+        memcpy(&bufS[3 * (A->numElems)], &(A->rowIdx[0]), sizeof(int) * (rowsPerChunk + 1));
 
         MPI_Isend(
             bufS,
@@ -112,22 +115,23 @@ SparseMatrixFrag* shiftColA(SparseMatrixFrag* A, int* cache, int myRank, int num
         MPI_Wait(&requestRecv, &statusRecv);
         memcpy(values, &buf[0], 2 * sizeof(int) * chunkNumElems);
         memcpy(colIdx, &buf[2 * chunkNumElems], sizeof(int) * chunkNumElems);
-        memcpy(rowIdx, &buf[3 * chunkNumElems], sizeof(int) * (n + 1));
+        memcpy(rowIdx, &buf[3 * chunkNumElems], sizeof(int) * (rowsPerChunk + 1));
     }
-    if (A->numElems > 0)
+    if (A->numElems > 0) {
         MPI_Wait(&requestSend, &statusSend);
+    }
 
     delete[](buf);
     delete[](bufS);
     delete(A);
     if (chunkNumElems > 0)
-        A = new SparseMatrixFrag(n, pad_size, chunkNumElems, values, rowIdx, colIdx, firstColIdxIncl, lastColIdxExcl);
+        A = new SparseMatrixFragByRow(n, pad_size, chunkNumElems, values, rowIdx, colIdx, firstRowIdxIncl, lastRowIdxExcl);
     else 
-        A = new SparseMatrixFrag(n, pad_size, firstColIdxIncl, lastColIdxExcl);
+        A = new SparseMatrixFragByRow(n, pad_size, firstRowIdxIncl, lastRowIdxExcl);
     return A;
 }
 
-DenseMatrixFrag* gatherResultColA(int myRank, int numProcesses, DenseMatrixFrag* C) {
+DenseMatrixFrag* gatherResultInnerABC(int myRank, int numProcesses, DenseMatrixFrag* C) {
     int firstColIdxIncl, lastColIdxExcl;
     int n = C->n;
     if (myRank == ROOT_PROCESS) {
@@ -153,13 +157,15 @@ DenseMatrixFrag* gatherResultColA(int myRank, int numProcesses, DenseMatrixFrag*
                 &requests[processNum - 1]
             );
         }
+
         MPI_Waitall(numProcesses - 1, requests, statuses);
 
         // seed is 0, so matrix is empty (filled with zeros)
         DenseMatrixFrag* whole_C = new DenseMatrixFrag(C->n, C->pad_size, 0 /*firstColIdxIncl*/, C->n /*lastColIdxExcl*/, 0 /*seed*/, false /*dont initialize array*/); 
         // Marge chunks into one final matrix
         for (int i=0; i<numProcesses; i++)
-            whole_C->addChunk(chunks[i]);
+            // Data is not contiguous, so use not optimalized version 
+            whole_C->addChunk(chunks[i], false);
         return whole_C;
     } else {
         MPI_Request request;
@@ -179,20 +185,21 @@ DenseMatrixFrag* gatherResultColA(int myRank, int numProcesses, DenseMatrixFrag*
     }
 }
 
-void colA(char* sparse_matrix_file, int seed, int c, int e, bool g, double g_val, bool verbose, int myRank, int numProcesses) {
-    int pad_size, chunkNumElems, org_n, n, firstColIdxIncl, lastColIdxExcl, chunkNum, bufSize;
+void innerABC(char* sparse_matrix_file, int seed, int c, int e, bool g, double g_val, bool verbose, int myRank, int numProcesses) {
+    int pad_size, chunkNumElems, org_n, n, chunkNum, bufSize;
+    int firstColIdxIncl, lastColIdxExcl;
     int* buf;
 
-    SparseMatrixFrag* A;
-    SparseMatrixFrag* whole_A;
+    SparseMatrixFragByRow* A;
+    SparseMatrixFragByRow* whole_A;
     DenseMatrixFrag* B;
     DenseMatrixFrag* C;
     DenseMatrixFrag* whole_C;
 
-    std::vector<SparseMatrixFrag*> chunks;
+    std::vector<SparseMatrixFragByRow*> chunks;
 
-    int groupSize = numProcesses/c;
-    
+    int groupSize = numProcesses / c;
+
     // Root process reads sparse matrix A
     if (myRank == ROOT_PROCESS) {
         // Read matrix from file
@@ -226,7 +233,7 @@ void colA(char* sparse_matrix_file, int seed, int c, int e, bool g, double g_val
         
         ReadFile.close();
 
-        whole_A = new SparseMatrixFrag(n, pad_size, elems, values, rowIdx, colIdx, 0, n);
+        whole_A = new SparseMatrixFragByRow(n, pad_size, elems, values, rowIdx, colIdx, 0, n);
         chunks = whole_A->chunk(groupSize);
     }
 
@@ -262,6 +269,9 @@ void colA(char* sparse_matrix_file, int seed, int c, int e, bool g, double g_val
     assert (pad_size >= 0);
     assert (numProcesses <= n);
     assert (n % numProcesses == 0);  // Check if we padded the matrix correctly
+    assert (numProcesses % (c * c) == 0);
+
+    int rowsPerChunk = n / groupSize;
 
     // Distribute chunks of A over all processes
     if (myRank == ROOT_PROCESS) {
@@ -271,17 +281,17 @@ void colA(char* sparse_matrix_file, int seed, int c, int e, bool g, double g_val
         int numMessagesSent = 0;
 
         for (int processNum=1; processNum<numProcesses; processNum++){
-            SparseMatrixFrag* chunk = chunks[processNum%groupSize];
+            SparseMatrixFragByRow* chunk = chunks[processNum % groupSize];
             chunkNumElems = chunk->numElems;
 
             // Merge 3 messages into 1
-            bufSize = 3 * chunkNumElems + (n + 1);
+            bufSize = 3 * chunkNumElems + (rowsPerChunk + 1);
             buf = new int[bufSize];
             buffers.push_back(buf);
 
             memcpy(&buf[0], &(chunk->values[0]), 2 * sizeof(int) * chunkNumElems);
             memcpy(&buf[2 * chunkNumElems], &(chunk->colIdx[0]), sizeof(int) * chunkNumElems);
-            memcpy(&buf[3 * chunkNumElems], &(chunk->rowIdx[0]), sizeof(int) * (n + 1));
+            memcpy(&buf[3 * chunkNumElems], &(chunk->rowIdx[0]), sizeof(int) * (rowsPerChunk + 1));
 
             if (chunkNumElems > 0) {
                 MPI_Request *request = new MPI_Request;
@@ -289,6 +299,7 @@ void colA(char* sparse_matrix_file, int seed, int c, int e, bool g, double g_val
                 requests.push_back(request);
                 statuses.push_back(status);
                 numMessagesSent++;
+
                 MPI_Isend(
                     buf,
                     bufSize,
@@ -301,8 +312,9 @@ void colA(char* sparse_matrix_file, int seed, int c, int e, bool g, double g_val
             }
         }
 
-        for (int i=0; i<numMessagesSent; i++)
+        for (int i=0; i<numMessagesSent; i++) {
             MPI_Wait(requests[i], statuses[i]);
+        }
         
         // Initialize chunk of ROOT process
         A = chunks[0];
@@ -318,18 +330,18 @@ void colA(char* sparse_matrix_file, int seed, int c, int e, bool g, double g_val
         chunkNum = myRank % groupSize;
         chunkNumElems = getChunkSize(cache, chunkNum);
 
-        int firstColIdxIncl = getFirstColIdxIncl(myRank, numProcesses, n, 0 /*round*/, c);
-        int lastColIdxExcl = getLastColIdxExcl(myRank, numProcesses, n, 0 /*round*/, c);
+        int firstRowIdxIncl = getFirstColIdxIncl(myRank, numProcesses, n, 0 /*round*/, c);
+        int lastRowIdxExcl = getLastColIdxExcl(myRank, numProcesses, n, 0 /*round*/, c);
 
         if (chunkNumElems > 0) {
             MPI_Request request;
             MPI_Status status;
 
-            bufSize = 3 * chunkNumElems + (n + 1);
+            bufSize = 3 * chunkNumElems + (rowsPerChunk + 1);
             buf = new int[bufSize];
 
             double* values = new double[chunkNumElems];
-            int* rowIdx = new int[n + 1];
+            int* rowIdx = new int[rowsPerChunk + 1];
             int* colIdx = new int[chunkNumElems];
 
             MPI_Irecv(
@@ -343,48 +355,49 @@ void colA(char* sparse_matrix_file, int seed, int c, int e, bool g, double g_val
             ); 
 
             MPI_Wait(&request, &status);
+
             memcpy(values, &buf[0], 2 * sizeof(int) * chunkNumElems);
             memcpy(colIdx, &buf[2 * chunkNumElems], sizeof(int) * chunkNumElems);
-            memcpy(rowIdx, &buf[3 * chunkNumElems], sizeof(int) * (n + 1));
+            memcpy(rowIdx, &buf[3 * chunkNumElems], sizeof(int) * (rowsPerChunk + 1));
 
             delete[] buf;
-            A = new SparseMatrixFrag(n, pad_size, chunkNumElems, values, rowIdx, colIdx, firstColIdxIncl, lastColIdxExcl);
+            A = new SparseMatrixFragByRow(n, pad_size, chunkNumElems, values, rowIdx, colIdx, firstRowIdxIncl, lastRowIdxExcl);
         }
         else {
             // Create empty matrix
-            A = new SparseMatrixFrag(n, pad_size, firstColIdxIncl, lastColIdxExcl);
+            A = new SparseMatrixFragByRow(n, pad_size, firstRowIdxIncl, lastRowIdxExcl);
         }
     }
 
     // Generate fragment of dense matrix
-    firstColIdxIncl = getFirstColIdxIncl(myRank, numProcesses, n);
-    lastColIdxExcl = getLastColIdxExcl(myRank, numProcesses, n);
+    firstColIdxIncl = getFirstColIdxIncl(myRank, numProcesses, n, 0 /*round*/, c);
+    lastColIdxExcl = getLastColIdxExcl(myRank, numProcesses, n, 0 /*round*/, c);
     B = new DenseMatrixFrag(n, pad_size, firstColIdxIncl, lastColIdxExcl, seed);
 
-    // ColA algorithm
+    // InnerABC algorithm
     for (int iteration = 0; iteration < e; iteration++) {
         C = new DenseMatrixFrag(n, pad_size, firstColIdxIncl, lastColIdxExcl);  // seed is 0, so matrix is all zeros
         for (int round=1; round<=groupSize; round++) {
-            multiplyColA(A, B, C);
-            A = shiftColA(A, cache, myRank, numProcesses, round, c);
+            if (myRank == 1)
+                multiplyInnerABC(A, B, C);
+            A = shiftInnerABC(A, cache, myRank, numProcesses, round, c);
         }
         delete(B);
         B = C;
     }
 
     // Show result
-    whole_C = gatherResultColA(myRank, numProcesses, C);
+    /*whole_C = gatherResultInnerABC(myRank, numProcesses, C);
     if (myRank == ROOT_PROCESS) {
         if (verbose)
             whole_C->printout();
         if (g)
             whole_C->printout(g_val);
-    }
-    
-    // Clean up
+    }*/
+
     MPI_Finalize();
-    delete(A);
+    /*delete(A);
     delete(B);
     if (myRank == ROOT_PROCESS)
-        delete(whole_C);
+        delete(whole_C);*/
 }

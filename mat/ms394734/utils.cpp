@@ -16,16 +16,24 @@ int calcFirstColIdxIncl(int myRank, int numProcesses, int n) {
     return myRank * n/numProcesses;
 }
 
-int getFirstColIdxIncl(int myRank, int numProcesses, int n, int round, int c) {
+int getFirstColIdxIncl(int myRank, int numProcesses, int n, int round, int c, bool inner) {
     int groupSize = numProcesses/c;
     int groupRank = myRank % groupSize;
-    return calcFirstColIdxIncl(((groupRank + round) % groupSize), groupSize, n);
+    if (inner)
+        // (+ groupSize) is to avoid negative values in modulo
+        return calcFirstColIdxIncl(((groupRank - round + groupSize) % groupSize), groupSize, n);
+    else
+        return calcFirstColIdxIncl(((groupRank + round) % groupSize), groupSize, n);
 }
 
-int getLastColIdxExcl(int myRank, int numProcesses, int n, int round, int c) {
+int getLastColIdxExcl(int myRank, int numProcesses, int n, int round, int c, bool inner) {
     int groupSize = numProcesses/c;
     int groupRank = myRank % groupSize;
-    return calcFirstColIdxIncl(((groupRank + round) % groupSize) + 1, groupSize, n);
+    if (inner)
+        // (+ groupSize) is to avoid negative values in modulo
+        return calcFirstColIdxIncl(((groupRank - round + groupSize) % groupSize) + 1, groupSize, n);
+    else
+        return calcFirstColIdxIncl(((groupRank + round) % groupSize) + 1, groupSize, n);
 }
 
 int getChunkSize(int *cache, int chunkNum) {
@@ -139,19 +147,21 @@ SparseMatrixFragByRow::SparseMatrixFragByRow(int n, int pad_size, int numElems, 
     this->numRows = lastRowIdxExcl - firstRowIdxIncl;
 }
 
-SparseMatrixFragByRow::SparseMatrixFragByRow(int n, int pad_size, int firstColIdxIncl, int lastColIdxExcl) {
+SparseMatrixFragByRow::SparseMatrixFragByRow(int n, int pad_size, int firstRowIdxIncl, int lastRowIdxExcl) {
     // Create empty sparse matrix
     this->n = n;
     this->pad_size = pad_size;
-    this->numElems = numElems;
+    this->numElems = 0;
     this->firstRowIdxIncl = firstRowIdxIncl;
     this->lastRowIdxExcl = lastRowIdxExcl;
-    this->numRows = numRows;
+    this->numRows = lastRowIdxExcl - firstRowIdxIncl;
 
     this->rowIdx = new int[this->numRows + 1];
 
-    for (int row=firstRowIdxIncl; row<lastColIdxExcl + 1; row++)
-        this->rowIdx[row] = 0; 
+    for (int row=firstRowIdxIncl; row<lastRowIdxExcl + 1; row++) {
+        int local_row = row - firstRowIdxIncl;
+        this->rowIdx[local_row] = 0; 
+    }
 }
 
 SparseMatrixFragByRow::~SparseMatrixFragByRow() {
@@ -164,39 +174,38 @@ SparseMatrixFragByRow::~SparseMatrixFragByRow() {
     }
 }
 
-// TODO
 std::vector<SparseMatrixFragByRow*> SparseMatrixFragByRow::chunk(int numChunks) {
     assert (this->n % numChunks == 0);
+    int rowsPerChunk = this->n / numChunks;
     std::vector<SparseMatrixFragByRow*> chunks;
+
     for (int chunkId=0; chunkId<numChunks; chunkId++) {
-        int firstColIdxIncl = getFirstColIdxIncl(chunkId, numChunks, this->n);
-        int lastColIdxExcl = getLastColIdxExcl(chunkId, numChunks, this->n);
+        int firstRowIdxIncl = getFirstColIdxIncl(chunkId, numChunks, this->n);
+        int lastRowIdxExcl = getLastColIdxExcl(chunkId, numChunks, this->n);
         std::vector<double> chunkValues;
         std::vector<int> chunkRowIdx;
         std::vector<int> chunkColIdx;
         int numElementsInChunk = 0;
         chunkRowIdx.push_back(0);
-        for (int row=0; row<n; row++) {
+        for (int row=firstRowIdxIncl; row<lastRowIdxExcl; row++) {
             int idx = this->rowIdx[row];
             int nextIdx = this->rowIdx[row+1];
             for (int i=idx; i<nextIdx; i++) {
-                if ((this->colIdx[i] >= firstColIdxIncl) && (this->colIdx[i] < lastColIdxExcl)) {
-                    numElementsInChunk++;
-                    chunkValues.push_back(this->values[i]);
-                    chunkColIdx.push_back(this->colIdx[i]);
-                }
+                numElementsInChunk++;
+                chunkValues.push_back(this->values[i]);
+                chunkColIdx.push_back(this->colIdx[i]);
             }
             chunkRowIdx.push_back(numElementsInChunk);
         }
 
         double* values = new double[numElementsInChunk];
-        int* rowIdx = new int[n+1];
+        int* rowIdx = new int[rowsPerChunk + 1];
         int* colIdx = new int[numElementsInChunk];
         std::copy(chunkValues.begin(), chunkValues.end(), values);
         std::copy(chunkRowIdx.begin(), chunkRowIdx.end(), rowIdx);
         std::copy(chunkColIdx.begin(), chunkColIdx.end(), colIdx);
 
-        SparseMatrixFragByRow *chunk = new SparseMatrixFragByRow(this->n, this->pad_size, numElementsInChunk, values, rowIdx, colIdx, firstColIdxIncl, lastColIdxExcl);
+        SparseMatrixFragByRow *chunk = new SparseMatrixFragByRow(this->n, this->pad_size, numElementsInChunk, values, rowIdx, colIdx, firstRowIdxIncl, lastRowIdxExcl);
         chunks.push_back(chunk);
     }
     return chunks;
@@ -253,19 +262,22 @@ double DenseMatrixFrag::get(int row, int col) {
     return this->data[local_col*this->n + row];
 }
 
-void DenseMatrixFrag::addChunk(DenseMatrixFrag* chunk) {
+void DenseMatrixFrag::addChunk(DenseMatrixFrag* chunk, bool opt) {
     assert (chunk->firstColIdxIncl >= this->firstColIdxIncl);
     assert (chunk->lastColIdxExcl <= this->lastColIdxExcl);
-    // Optimalized data copying
-    int offset = this->n * (chunk->firstColIdxIncl - this->firstColIdxIncl);
-    std::copy(&(chunk->data[0]), &(chunk->data[chunk->numElems]), &(this->data[offset]));
-    /* Old version:
-    for (int col=chunk->firstColIdxIncl; col < chunk->lastColIdxExcl; col++) {
-        for (int row=0; row<this->n; row++) {
-            double val = chunk->get(row, col);
-            this->add(row, col, val);
+    // TODO add switch between optimalized version and not
+    if (opt) {
+        // Optimalized data copying (but the data must be contiguous)
+        int offset = this->n * (chunk->firstColIdxIncl - this->firstColIdxIncl);
+        std::copy(&(chunk->data[0]), &(chunk->data[chunk->numElems]), &(this->data[offset]));
+    } else {
+        for (int col=chunk->firstColIdxIncl; col < chunk->lastColIdxExcl; col++) {
+            for (int row=0; row<this->n; row++) {
+                double val = chunk->get(row, col);
+                this->add(row, col, val);
+            }
         }
-    }*/
+    }
 }
 
 void DenseMatrixFrag::printout() {
