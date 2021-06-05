@@ -180,7 +180,8 @@ DenseMatrixFrag* gatherResultColA(int myRank, int numProcesses, DenseMatrixFrag*
 }
 
 void colA(char* sparse_matrix_file, int seed, int c, int e, bool g, double g_val, bool verbose, int myRank, int numProcesses) {
-    int pad_size, chunkNumElems, org_n, n, firstColIdxIncl, lastColIdxExcl, chunkNum;
+    int pad_size, chunkNumElems, org_n, n, firstColIdxIncl, lastColIdxExcl, chunkNum, bufSize;
+    int *buf;
 
     MPI_Status status;
     SparseMatrixFrag* A;
@@ -270,8 +271,8 @@ void colA(char* sparse_matrix_file, int seed, int c, int e, bool g, double g_val
             chunkNumElems = chunk->numElems;
 
             // Merge 3 messages into 1
-            int bufSize = 3 * chunkNumElems + (n + 1);
-            int *buf = new int[bufSize];
+            bufSize = 3 * chunkNumElems + (n + 1);
+            buf = new int[bufSize];
 
             memcpy(&buf[0], &(chunk->values[0]), 2 * sizeof(int) * chunkNumElems);
             memcpy(&buf[2 * chunkNumElems], &(chunk->colIdx[0]), sizeof(int) * chunkNumElems);
@@ -289,11 +290,10 @@ void colA(char* sparse_matrix_file, int seed, int c, int e, bool g, double g_val
             }
         }
 
-        // TODO delete buf
-
         // Initialize chunk of ROOT process
         A = chunks[0];
         
+        delete[](buf);
         // Delete temporary chunks
         for (size_t i=1; i<chunks.size(); i++)
             delete(chunks[i]);
@@ -307,8 +307,8 @@ void colA(char* sparse_matrix_file, int seed, int c, int e, bool g, double g_val
         int lastColIdxExcl = getLastColIdxExcl(myRank, numProcesses, n, 0 /*round*/, c);
 
         if (chunkNumElems > 0) {
-            int bufSize = 3 * chunkNumElems + (n + 1);
-            int *buf = new int[bufSize];
+            bufSize = 3 * chunkNumElems + (n + 1);
+            buf = new int[bufSize];
 
             double* values = new double[chunkNumElems];
             int* rowIdx = new int[n + 1];
@@ -328,8 +328,7 @@ void colA(char* sparse_matrix_file, int seed, int c, int e, bool g, double g_val
             memcpy(colIdx, &buf[2 * chunkNumElems], sizeof(int) * chunkNumElems);
             memcpy(rowIdx, &buf[3 * chunkNumElems], sizeof(int) * (n + 1));
 
-            // TODO delete buf
-
+            delete[](buf);
             A = new SparseMatrixFrag(n, pad_size, chunkNumElems, values, rowIdx, colIdx, firstColIdxIncl, lastColIdxExcl);
         }
         else {
