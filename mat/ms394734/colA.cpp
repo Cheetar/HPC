@@ -286,9 +286,33 @@ void colA(char* sparse_matrix_file, int seed, int c, int e, bool g, double g_val
             SparseMatrixFrag* chunk = chunks[processNum%groupSize];
             chunkNumElems = chunk->numElems;
 
-            //int *buf = new int[3 * chunkNumElems + (n + 1)] 
+            int bufSize = 3 * chunkNumElems + (n + 1);
+            int *buf = new int[bufSize];
+
+            /*
+            std::cout << "2." << std::endl;
+            std::copy(&(chunk->values[0]), &(chunk->values[chunkNumElems]), &buf[0]);
+            std::cout << "3." << std::endl;
+            std::copy(&(chunk->colIdx[0]), &(chunk->colIdx[chunkNumElems]), &buf[2 * chunkNumElems]);
+            std::cout << "4." << std::endl;
+            std::copy(&(chunk->rowIdx[0]), &(chunk->rowIdx[n+1]), &buf[3 * chunkNumElems]);
+            std::cout << "5." << std::endl;
+            */
+
+            memcpy(&buf[0], &(chunk->values[0]), 2 * sizeof(int) * chunkNumElems);
+            memcpy(&buf[2 * chunkNumElems], &(chunk->colIdx[0]), sizeof(int) * chunkNumElems);
+            memcpy(&buf[3 * chunkNumElems], &(chunk->rowIdx[0]), sizeof(int) * (n + 1));
 
             if (chunkNumElems > 0) {
+                MPI_Send(
+                    buf,
+                    bufSize,
+                    MPI_INT,
+                    processNum,
+                    TAG,
+                    MPI_COMM_WORLD
+                );
+                /*
                 MPI_Send(
                     chunk->values,
                     chunkNumElems,
@@ -312,7 +336,7 @@ void colA(char* sparse_matrix_file, int seed, int c, int e, bool g, double g_val
                     processNum,
                     TAG,
                     MPI_COMM_WORLD
-                );
+                );*/
             }
         }
 
@@ -332,10 +356,38 @@ void colA(char* sparse_matrix_file, int seed, int c, int e, bool g, double g_val
         int lastColIdxExcl = getLastColIdxExcl(myRank, numProcesses, n, 0 /*round*/, c);
 
         if (chunkNumElems > 0) {
+            int bufSize = 3 * chunkNumElems + (n + 1);
+            int *buf = new int[bufSize];
+
             double* values = new double[chunkNumElems];
             int* rowIdx = new int[n + 1];
             int* colIdx = new int[chunkNumElems];
 
+            MPI_Recv(
+                buf,
+                bufSize,
+                MPI_INT,
+                ROOT_PROCESS,
+                TAG,
+                MPI_COMM_WORLD,
+                &status
+            ); 
+
+            /*
+            std::cout << "e." << std::endl;
+            std::copy(&buf[0], &buf[2 * chunkNumElems], values);
+            std::cout << "f." << std::endl;
+            std::copy(&buf[2 * chunkNumElems], &buf[3 * chunkNumElems], colIdx);
+            std::cout << "g." << std::endl;
+            std::copy(&buf[3 * chunkNumElems], &buf[bufSize], rowIdx);
+            std::cout << "h." << std::endl;
+            */
+
+            memcpy(values, &buf[0], 2 * sizeof(int) * chunkNumElems);
+            memcpy(colIdx, &buf[2 * chunkNumElems], sizeof(int) * chunkNumElems);
+            memcpy(rowIdx, &buf[3 * chunkNumElems], sizeof(int) * (n + 1));
+
+            /*
             MPI_Recv(
                 values,
                 chunkNumElems,
@@ -363,6 +415,7 @@ void colA(char* sparse_matrix_file, int seed, int c, int e, bool g, double g_val
                 MPI_COMM_WORLD,
                 &status
             ); 
+            */
 
             A = new SparseMatrixFrag(n, pad_size, chunkNumElems, values, rowIdx, colIdx, firstColIdxIncl, lastColIdxExcl);
         }

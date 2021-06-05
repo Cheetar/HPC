@@ -23,6 +23,9 @@ int main(int argc, char * argv[]) {
     char* sparse_matrix_file; 
     double g_val;
 
+    static_assert ( sizeof(int) == 4 );
+    static_assert ( sizeof(double) == 8 );
+
     /* MPI initialization */
     MPI_Init(&argc, &argv);
     MPI_Comm_size(MPI_COMM_WORLD, &numProcesses);
