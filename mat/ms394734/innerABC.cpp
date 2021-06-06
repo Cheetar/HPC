@@ -21,7 +21,7 @@ void multiplyInnerABC(SparseMatrixFragByRow* A, DenseMatrixFrag* B, DenseMatrixF
         int curRow, nextRow;
         double val;
 
-        // TODO # pragma omp for collapse(2)
+        # pragma omp for collapse(2)
         for (int row=A->firstRowIdxIncl; row<A->lastRowIdxExcl; row++) {
             for (int col=B->firstColIdxIncl; col<B->lastColIdxExcl; col++) {
                 int local_row = row - A->firstRowIdxIncl;
@@ -72,7 +72,6 @@ SparseMatrixFragByRow* shiftInnerABC(SparseMatrixFragByRow* A, int* cache, int m
     assert(A->numElems >= 0);
 
     chunkNum = getChunkNumber(myRank, numProcesses, round, c, true /*inner*/);
-    //std::cout << "myRank " << myRank << " | round " <<round << " | chunkNum: " << chunkNum << std::endl;
     chunkNumElems = getChunkSize(cache, chunkNum);
     rowsPerChunk = n / groupSize;
 
@@ -84,8 +83,6 @@ SparseMatrixFragByRow* shiftInnerABC(SparseMatrixFragByRow* A, int* cache, int m
 
         bufSize = 3 * chunkNumElems + (rowsPerChunk + 1);
         buf = new int[bufSize];
-
-        //std::cout << "myRank " <<myRank <<  " | Receiving " << bufSize << " bytes from " << prevProcessNo << std::endl;
 
         MPI_Irecv(
             buf,
@@ -108,8 +105,6 @@ SparseMatrixFragByRow* shiftInnerABC(SparseMatrixFragByRow* A, int* cache, int m
         memcpy(&bufS[2 * (A->numElems)], &(A->colIdx[0]), sizeof(int) * (A->numElems));
         memcpy(&bufS[3 * (A->numElems)], &(A->rowIdx[0]), sizeof(int) * (rowsPerChunk + 1));
 
-        //std::cout << "myRank " <<myRank <<  " | Sending " << bufSize << " bytes to " << nextProcessNo << std::endl;
-
         MPI_Isend(
             bufS,
             bufSize,
@@ -122,10 +117,7 @@ SparseMatrixFragByRow* shiftInnerABC(SparseMatrixFragByRow* A, int* cache, int m
     }
 
     if (chunkNumElems > 0) {
-        //std::cout << "pre 1" << std::endl;
-        //std::cout << "myRank " << myRank << " | numJumps " << numJumps << std::endl;
         MPI_Wait(&requestRecv, &statusRecv);
-        //std::cout << "post 1" << std::endl;
         memcpy(values, &buf[0], 2 * sizeof(int) * chunkNumElems);
         memcpy(colIdx, &buf[2 * chunkNumElems], sizeof(int) * chunkNumElems);
         memcpy(rowIdx, &buf[3 * chunkNumElems], sizeof(int) * (rowsPerChunk + 1));
@@ -162,18 +154,16 @@ SparseMatrixFragByRow* postIterationShiftInnerABC(SparseMatrixFragByRow* A, int*
 void postIterationGatherInnerABC(DenseMatrixFrag* C, int myRank, int numProcesses, int c) {
     int groupSize = numProcesses/c;
     int groupRank = myRank % groupSize;
-    int groupNumber = myRank / groupSize;
     int myMaster = groupRank;
     int numbersPerChunk = C->numElems;
 
     MPI_Status status;
 
     if (myRank == myMaster) {
-        DenseMatrixFrag* chunk = new DenseMatrixFrag(C->n, C->pad_size, C->firstColIdxIncl, C->lastColIdxExcl, 0 /*seed*/, false /*dont initialize*/);
         // Receive chunk from each layer
+        DenseMatrixFrag* chunk = new DenseMatrixFrag(C->n, C->pad_size, C->firstColIdxIncl, C->lastColIdxExcl, 0 /*seed*/, false /*dont initialize*/);
         for (int layer = 1; layer < c; layer++) {
             int source = myRank + (layer * groupSize);
-            //std::cout << "myRank: " << myRank << " | Receiving from " << source << std::endl; 
             MPI_Recv(
                 chunk->data,
                 numbersPerChunk,
@@ -185,11 +175,10 @@ void postIterationGatherInnerABC(DenseMatrixFrag* C, int myRank, int numProcesse
             );
             // Merge chunks
             C->addChunk(chunk, false /*dont override previous values*/);
-            // TODO delete(chunk);
         }
+        delete(chunk);
     } else {
         // Send my chunk to my master
-        //std::cout << "myRank: " << myRank << " | Sending to " << myMaster << std::endl; 
         MPI_Send(
             C->data,
             numbersPerChunk,
@@ -222,7 +211,6 @@ DenseMatrixFrag* gatherResultInnerABC(int myRank, int numProcesses, int c, Dense
     int firstColIdxIncl, lastColIdxExcl;
     int n = C->n;
     int groupSize = numProcesses/c;
-    int groupRank = myRank % groupSize;
     int groupNumber = myRank / groupSize;
     if (myRank == ROOT_PROCESS) {
         MPI_Request requests[groupSize - 1];
@@ -468,66 +456,23 @@ void innerABC(char* sparse_matrix_file, int seed, int c, int e, bool g, double g
     lastColIdxExcl = getLastColIdxExcl(myRank, numProcesses, n, 0 /*round*/, c);
     B = new DenseMatrixFrag(n, pad_size, firstColIdxIncl, lastColIdxExcl, seed);
 
-    //std::cout << "myRank = " << myRank << " | B->firstColIdxIncl = " << B->firstColIdxIncl << std::endl;
-
     // InnerABC algorithm
     // Initially shift processes in each layer
-    int no_process = -1;
-
-    if (myRank == no_process) {
-        std::cout << "pre" <<std::endl;
-        std::cout << "A->firstRowIdxIncl = " << A->firstRowIdxIncl << " | A->lastRowIdxExcl = " << A->lastRowIdxExcl << std::endl;
-        A->printout();
-    }
     A = preShiftInnerABC(A, cache, myRank, numProcesses, c);
-    if (myRank == no_process) {
-        std::cout << "post pre shift" <<std::endl;
-        std::cout << "A->firstRowIdxIncl = " << A->firstRowIdxIncl << " | A->lastRowIdxExcl = " << A->lastRowIdxExcl << std::endl;
-        A->printout();
-    }
-
-    // TODO Fix for other exponents than 1
     for (int iteration = 0; iteration < e; iteration++) {
         C = new DenseMatrixFrag(n, pad_size, firstColIdxIncl, lastColIdxExcl);  // seed is 0, so matrix is all zeros
         for (int round=1; round<=q; round++) {
-            if (myRank == no_process) {
-                std::cout << "round " << round << std::endl;
-                std::cout << "B->firstColIdxIncl = " << B->firstColIdxIncl << " | B->lastColIdxExcl = " << B->lastColIdxExcl << std::endl;
-                B->printout();
-            }
             multiplyInnerABC(A, B, C);
-            if (myRank == no_process) {
-                std::cout << "post multiplication" <<std::endl;
-                std::cout << "C->firstColIdxIncl = " << C->firstColIdxIncl << " | C->lastColIdxExcl = " << C->lastColIdxExcl << std::endl;
-                C->printout();
-            }
             A = shiftInnerABC(A, cache, myRank, numProcesses, c, round, 1);
-            if (myRank == no_process) {
-                std::cout << "round " << round << std::endl;
-                std::cout << "A->firstRowIdxIncl = " << A->firstRowIdxIncl << " | A->lastRowIdxExcl = " << A->lastRowIdxExcl << std::endl;
-                A->printout();
-            }
         }
 
         A = postIterationShiftInnerABC(A, cache, myRank, numProcesses, c);
         postIterationGatherInnerABC(C, myRank, numProcesses, c);
-        if (myRank == no_process) {
-            std::cout << "post iteration" <<std::endl;
-            std::cout << "A->firstRowIdxIncl = " << A->firstRowIdxIncl << " | A->lastRowIdxExcl = " << A->lastRowIdxExcl << std::endl;
-            A->printout();
-        }
-        // TODO delete(B);
+        delete(B);
         B = C;
     }
 
-    if (myRank == no_process) {
-        std::cout << "after everything" <<std::endl;
-        std::cout << "C->firstColIdxIncl = " << C->firstColIdxIncl << " | C->lastColIdxExcl = " << C->lastColIdxExcl << std::endl;
-        C->printout();
-    }
-
     // Show result
-    // TODO In Inner, at the end, should the processes send their parts of matrix to process in layer 0, or can they directly send the parts to the coordinator (or just the counts for -g)? | For fair measurements, please reduce first to layer 0, and only then send to the coordinator.
     // TODO In general: if -g or no output option is used, you can't assume the result will fit in a single node. But you can assume that if -v is used, C will fit in a single node.
     whole_C = gatherResultInnerABC(myRank, numProcesses, c, C);
     if (myRank == ROOT_PROCESS) {
@@ -538,8 +483,8 @@ void innerABC(char* sparse_matrix_file, int seed, int c, int e, bool g, double g
     }
 
     MPI_Finalize();
-    /*delete(A);
+    delete(A);
     delete(B);
     if (myRank == ROOT_PROCESS)
-        delete(whole_C);*/
+        delete(whole_C);
 }

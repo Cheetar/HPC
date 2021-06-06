@@ -278,7 +278,6 @@ double DenseMatrixFrag::get(int row, int col) {
 void DenseMatrixFrag::addChunk(DenseMatrixFrag* chunk, bool opt) {
     assert (chunk->firstColIdxIncl >= this->firstColIdxIncl);
     assert (chunk->lastColIdxExcl <= this->lastColIdxExcl);
-    // TODO add switch between optimalized version and not
     if (opt) {
         // Optimalized data copying (but the data must be contiguous)
         int offset = this->n * (chunk->firstColIdxIncl - this->firstColIdxIncl);
