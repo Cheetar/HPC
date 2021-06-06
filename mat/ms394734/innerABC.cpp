@@ -163,12 +163,11 @@ void postIterationGatherInnerABC(DenseMatrixFrag* C, int myRank, int numProcesse
         // Receive chunk from each layer
         DenseMatrixFrag* chunk = new DenseMatrixFrag(C->n, C->pad_size, C->firstColIdxIncl, C->lastColIdxExcl, 0 /*seed*/, false /*dont initialize*/);
         for (int layer = 1; layer < c; layer++) {
-            int source = myRank + (layer * groupSize);
             MPI_Recv(
                 chunk->data,
                 numbersPerChunk,
                 MPI_DOUBLE,
-                source,
+                MPI_ANY_SOURCE,
                 TAG,
                 MPI_COMM_WORLD,
                 &status
