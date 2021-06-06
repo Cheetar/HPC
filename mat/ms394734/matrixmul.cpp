@@ -32,32 +32,41 @@ int main(int argc, char * argv[]) {
     MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
 
     /* Read program arguments */
-    // Order of arguments is important!
-    // Format: matrixmul -f sparse_matrix_file -s seed_for_dense_matrix -c repl_group_size -e exponent [-g ge_value] [-v] [-i]
     assert((9 <= argc) && (argc <= 13));
 
-    assert(strcmp(argv[1], "-f") == 0);
-    sparse_matrix_file = argv[2];
-
-    assert(strcmp(argv[3], "-s") == 0);
-    seed = atoi(argv[4]);
-
-    assert(strcmp(argv[5], "-c") == 0);
-    c = atoi(argv[6]);
-
-    assert(strcmp(argv[7], "-e") == 0);
-    e = atoi(argv[8]);
-
-    if ((argc >= 11) && (strcmp(argv[9], "-g") == 0)) {
-        g = true;
-        g_val = atof(argv[10]);
-    }
-
-    for (int i=9; i<argc; i++) {
-        if (strcmp(argv[i], "-v") == 0) {
+    int i = 1;
+    while (i < argc) {
+        if (strcmp(argv[i], "-f") == 0) {
+            assert (i + 1 < argc);
+            sparse_matrix_file = argv[i + 1];
+            i += 2;
+        } else if (strcmp(argv[i], "-s") == 0) {
+            assert (i + 1 < argc);
+            seed = atoi(argv[i + 1]);
+            i += 2;
+        } else if (strcmp(argv[i], "-c") == 0) {
+            assert (i + 1 < argc);
+            c = atoi(argv[i + 1]);
+            i += 2;
+        } else if (strcmp(argv[i], "-e") == 0) {
+            assert (i + 1 < argc);
+            e = atoi(argv[i + 1]);
+            i += 2;
+        } else if (strcmp(argv[i], "-g") == 0) {
+            assert (i + 1 < argc);
+            g = true;
+            g_val = atof(argv[i + 1]);
+            i += 2;
+        } else if (strcmp(argv[i], "-v") == 0) {
             verbose = true;
+            i++;
         } else if (strcmp(argv[i], "-i") == 0) {
             inner = true;
+            i++;
+        } else {
+            std::cout << "Incorrect program parameters!" << std::endl;
+            std::cout << "Usage: ./matrixmul -f sparse_matrix_file -s seed_for_dense_matrix -c repl_group_size -e exponent [-g ge_value] [-v] [-i]" << std::endl;
+            exit(1);
         }
     }
     
