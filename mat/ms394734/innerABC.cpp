@@ -146,7 +146,6 @@ SparseMatrixFragByRow* shiftInnerABC(SparseMatrixFragByRow* A, int* cache, int m
 
 SparseMatrixFragByRow* preShiftInnerABC(SparseMatrixFragByRow* A, int* cache, int myRank, int numProcesses, int c) {
     int groupSize = numProcesses/c;
-    int groupRank = myRank % groupSize;
     int groupNumber = myRank / groupSize;
     int q = numProcesses / (c * c);
     int numJumps = groupNumber * q;
@@ -155,25 +154,85 @@ SparseMatrixFragByRow* preShiftInnerABC(SparseMatrixFragByRow* A, int* cache, in
 
 SparseMatrixFragByRow* postIterationShiftInnerABC(SparseMatrixFragByRow* A, int* cache, int myRank, int numProcesses, int c) {
     int groupSize = numProcesses/c;
-    int groupRank = myRank % groupSize;
-    int groupNumber = myRank / groupSize;
     int q = numProcesses / (c * c);
     int numJumps = groupSize - q;  // Move q jumps backwards
     return shiftInnerABC(A, cache, myRank, numProcesses, c, 0, numJumps);
 }
 
+void postIterationGatherInnerABC(DenseMatrixFrag* C, int myRank, int numProcesses, int c) {
+    int groupSize = numProcesses/c;
+    int groupRank = myRank % groupSize;
+    int groupNumber = myRank / groupSize;
+    int myMaster = groupRank;
+    int numbersPerChunk = C->numElems;
+
+    MPI_Status status;
+
+    if (myRank == myMaster) {
+        DenseMatrixFrag* chunk = new DenseMatrixFrag(C->n, C->pad_size, C->firstColIdxIncl, C->lastColIdxExcl, 0 /*seed*/, false /*dont initialize*/);
+        // Receive chunk from each layer
+        for (int layer = 1; layer < c; layer++) {
+            int source = myRank + (layer * groupSize);
+            //std::cout << "myRank: " << myRank << " | Receiving from " << source << std::endl; 
+            MPI_Recv(
+                chunk->data,
+                numbersPerChunk,
+                MPI_DOUBLE,
+                source,
+                TAG,
+                MPI_COMM_WORLD,
+                &status
+            );
+            // Merge chunks
+            C->addChunk(chunk, false /*dont override previous values*/);
+            // TODO delete(chunk);
+        }
+    } else {
+        // Send my chunk to my master
+        //std::cout << "myRank: " << myRank << " | Sending to " << myMaster << std::endl; 
+        MPI_Send(
+            C->data,
+            numbersPerChunk,
+            MPI_DOUBLE,
+            myMaster,
+            TAG,
+            MPI_COMM_WORLD
+        );
+    }
+
+    MPI_Comm commToMaster;
+    MPI_Comm_split(
+        MPI_COMM_WORLD,
+        groupRank,  // color
+        myRank,  // key 
+        &commToMaster
+    );
+
+    // Distribute chunks
+    MPI_Bcast(
+        C->data,
+        numbersPerChunk,
+        MPI_DOUBLE,
+        0,  // Root of this communicator
+        commToMaster
+    );
+}
 
 DenseMatrixFrag* gatherResultInnerABC(int myRank, int numProcesses, int c, DenseMatrixFrag* C) {
     int firstColIdxIncl, lastColIdxExcl;
     int n = C->n;
+    int groupSize = numProcesses/c;
+    int groupRank = myRank % groupSize;
+    int groupNumber = myRank / groupSize;
     if (myRank == ROOT_PROCESS) {
-        MPI_Request requests[numProcesses - 1];
-        MPI_Status statuses[numProcesses - 1];
+        MPI_Request requests[groupSize - 1];
+        MPI_Status statuses[groupSize - 1];
 
         std::vector<DenseMatrixFrag*> chunks;
         chunks.push_back(C);  // Add chunk of ROOT process
 
-        for (int processNum=1; processNum<numProcesses; processNum++) {
+        // Gather data only from first layer
+        for (int processNum=1; processNum<groupSize; processNum++) {
             firstColIdxIncl = getFirstColIdxIncl(processNum, numProcesses, n, 0, c);
             lastColIdxExcl = getLastColIdxExcl(processNum, numProcesses, n, 0, c);
             // Create empty placeholders for partial results
@@ -190,28 +249,30 @@ DenseMatrixFrag* gatherResultInnerABC(int myRank, int numProcesses, int c, Dense
             );
         }
 
-        MPI_Waitall(numProcesses - 1, requests, statuses);
+        MPI_Waitall(groupSize - 1, requests, statuses);
 
         // seed is 0, so matrix is empty (filled with zeros)
         DenseMatrixFrag* whole_C = new DenseMatrixFrag(C->n, C->pad_size, 0 /*firstColIdxIncl*/, C->n /*lastColIdxExcl*/, 0 /*seed*/, true /*initialize array*/); 
         // Marge chunks into one final matrix
-        for (int i=0; i<numProcesses; i++)
+        for (int i=0; i<groupSize; i++)
             // Data is not contiguous, so use not optimalized version 
             whole_C->addChunk(chunks[i], false);
         return whole_C;
     } else {
-        MPI_Request request;
-        assert(C->numElems > 0);
+        if (groupNumber == 0) {
+            MPI_Request request;
+            assert(C->numElems > 0);
 
-        MPI_Isend(
-            C->data,
-            C->numElems,
-            MPI_DOUBLE,
-            ROOT_PROCESS,
-            TAG,
-            MPI_COMM_WORLD,
-            &request
-        );
+            MPI_Isend(
+                C->data,
+                C->numElems,
+                MPI_DOUBLE,
+                ROOT_PROCESS,
+                TAG,
+                MPI_COMM_WORLD,
+                &request
+            );
+        }
 
         return nullptr;
     }
@@ -407,6 +468,8 @@ void innerABC(char* sparse_matrix_file, int seed, int c, int e, bool g, double g
     lastColIdxExcl = getLastColIdxExcl(myRank, numProcesses, n, 0 /*round*/, c);
     B = new DenseMatrixFrag(n, pad_size, firstColIdxIncl, lastColIdxExcl, seed);
 
+    //std::cout << "myRank = " << myRank << " | B->firstColIdxIncl = " << B->firstColIdxIncl << std::endl;
+
     // InnerABC algorithm
     // Initially shift processes in each layer
     int no_process = -1;
@@ -447,7 +510,7 @@ void innerABC(char* sparse_matrix_file, int seed, int c, int e, bool g, double g
         }
 
         A = postIterationShiftInnerABC(A, cache, myRank, numProcesses, c);
-        // TODO C = postIterationGatherInnerABC();
+        postIterationGatherInnerABC(C, myRank, numProcesses, c);
         if (myRank == no_process) {
             std::cout << "post iteration" <<std::endl;
             std::cout << "A->firstRowIdxIncl = " << A->firstRowIdxIncl << " | A->lastRowIdxExcl = " << A->lastRowIdxExcl << std::endl;
