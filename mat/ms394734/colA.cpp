@@ -115,9 +115,10 @@ SparseMatrixFrag* shiftColA(SparseMatrixFrag* A, int* cache, int myRank, int num
         memcpy(rowIdx, &buf[3 * chunkNumElems], sizeof(int) * (n + 1));
         delete[](buf);
     }
-    if (A->numElems > 0)
+    if (A->numElems > 0) {
         MPI_Wait(&requestSend, &statusSend);
         delete[](bufS);
+    }
 
     delete(A);
     if (chunkNumElems > 0)
@@ -180,7 +181,7 @@ DenseMatrixFrag* gatherResultColA(int myRank, int numProcesses, DenseMatrixFrag*
 }
 
 void colA(char* sparse_matrix_file, int seed, int c, int e, bool g, double g_val, bool verbose, int myRank, int numProcesses) {
-    int pad_size, chunkNumElems, org_n, n, firstColIdxIncl, lastColIdxExcl, chunkNum, bufSize;
+    int pad_size, chunkNumElems, org_n, n, firstColIdxIncl, lastColIdxExcl, chunkNum, bufSize, numElemsAboveTh;
     int* buf;
 
     SparseMatrixFrag* A;
@@ -373,18 +374,35 @@ void colA(char* sparse_matrix_file, int seed, int c, int e, bool g, double g_val
     }
 
     // Show result
-    whole_C = gatherResultColA(myRank, numProcesses, C);
-    if (myRank == ROOT_PROCESS) {
-        if (verbose)
+    if (verbose) {
+        // Whole matrix C will fit into single node (assumption from FAQ)
+        whole_C = gatherResultColA(myRank, numProcesses, C);
+        if (myRank == ROOT_PROCESS)
             whole_C->printout();
-        if (g)
-            whole_C->printout(g_val);
+    }
+
+    if (g) {
+        // We can't assume the whole matrix will fit into single node - gather partial results
+        int totalNumElemsAboveTh = 0;
+        numElemsAboveTh = C->getNumberOfGreaterThan(g_val);
+
+        MPI_Reduce(
+            &numElemsAboveTh,
+            &totalNumElemsAboveTh,
+            1, // Send one int
+            MPI_INT,
+            MPI_Op MPI_SUM,
+            ROOT_PROCESS,
+            MPI_COMM_WORLD
+        );
+        if (myRank == ROOT_PROCESS)
+            std::cout << totalNumElemsAboveTh << std::endl;
     }
     
     // Clean up
     MPI_Finalize();
     delete(A);
     delete(B);
-    if (myRank == ROOT_PROCESS)
+    if ((myRank == ROOT_PROCESS) && verbose)
         delete(whole_C);
 }

@@ -74,8 +74,7 @@ class DenseMatrixFrag{
 
         void printout();
 
-        // Prints number of elements greater or equal th
-        void printout(double th);
+        int getNumberOfGreaterThan(double th);
 };
 
 #endif

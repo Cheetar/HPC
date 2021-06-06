@@ -268,7 +268,7 @@ DenseMatrixFrag* gatherResultInnerABC(int myRank, int numProcesses, int c, Dense
 
 void innerABC(char* sparse_matrix_file, int seed, int c, int e, bool g, double g_val, bool verbose, int myRank, int numProcesses) {
     int pad_size, chunkNumElems, org_n, n, chunkNum, bufSize;
-    int firstColIdxIncl, lastColIdxExcl;
+    int firstColIdxIncl, lastColIdxExcl, numElemsAboveTh;
     int* buf;
 
     SparseMatrixFragByRow* A;
@@ -473,18 +473,49 @@ void innerABC(char* sparse_matrix_file, int seed, int c, int e, bool g, double g
     }
 
     // Show result
-    // TODO In general: if -g or no output option is used, you can't assume the result will fit in a single node. But you can assume that if -v is used, C will fit in a single node.
-    whole_C = gatherResultInnerABC(myRank, numProcesses, c, C);
-    if (myRank == ROOT_PROCESS) {
-        if (verbose)
+    if (verbose) {
+        // Whole matrix C will fit into single node (assumption from FAQ)
+        whole_C = gatherResultInnerABC(myRank, numProcesses, c, C);
+        if (myRank == ROOT_PROCESS)
             whole_C->printout();
-        if (g)
-            whole_C->printout(g_val);
+    }
+
+    if (g) {
+        // We can't assume the whole matrix will fit into single node - gather partial results
+        int groupSize = numProcesses / c;
+        int groupNumber = myRank / groupSize;
+
+        // Create communicator for processes from first layer
+        MPI_Comm commFirstLayer;
+        MPI_Comm_split(
+            MPI_COMM_WORLD,
+            groupNumber,  // color
+            myRank,  // key 
+            &commFirstLayer
+        );
+
+        // Computed fragments of C are stored on processes in the first layer
+        if (groupNumber == 0) {
+            int totalNumElemsAboveTh = 0;
+            numElemsAboveTh = C->getNumberOfGreaterThan(g_val);
+
+            MPI_Reduce(
+                &numElemsAboveTh,
+                &totalNumElemsAboveTh,
+                1, // Send one int
+                MPI_INT,
+                MPI_Op MPI_SUM,
+                ROOT_PROCESS,
+                commFirstLayer
+            );
+            if (myRank == ROOT_PROCESS)
+                std::cout << totalNumElemsAboveTh << std::endl;
+        }
     }
 
     MPI_Finalize();
     delete(A);
     delete(B);
-    if (myRank == ROOT_PROCESS)
+    if ((myRank == ROOT_PROCESS) && verbose)
         delete(whole_C);
 }

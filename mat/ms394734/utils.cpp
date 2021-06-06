@@ -304,8 +304,8 @@ void DenseMatrixFrag::printout() {
     }
 }
 
-// Prints number of elements greater or equal th
-void DenseMatrixFrag::printout(double th) {
+int DenseMatrixFrag::getNumberOfGreaterThan(double th) {
+    // Returns the number of elements greater *or equal* value th
     int numElems = 0;
     for (int row=0; row<this->n - this->pad_size; row++) {
         for (int col = this->firstColIdxIncl; col<std::min(lastColIdxExcl, this->n - this->pad_size); col++) {
@@ -314,5 +314,5 @@ void DenseMatrixFrag::printout(double th) {
                 numElems++;
         }
     }
-    std::cout << numElems << std::endl;
+    return numElems;
 }
