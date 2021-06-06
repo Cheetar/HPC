@@ -113,12 +113,12 @@ SparseMatrixFrag* shiftColA(SparseMatrixFrag* A, int* cache, int myRank, int num
         memcpy(values, &buf[0], 2 * sizeof(int) * chunkNumElems);
         memcpy(colIdx, &buf[2 * chunkNumElems], sizeof(int) * chunkNumElems);
         memcpy(rowIdx, &buf[3 * chunkNumElems], sizeof(int) * (n + 1));
+        delete[](buf);
     }
     if (A->numElems > 0)
         MPI_Wait(&requestSend, &statusSend);
+        delete[](bufS);
 
-    delete[](buf);
-    delete[](bufS);
     delete(A);
     if (chunkNumElems > 0)
         A = new SparseMatrixFrag(n, pad_size, chunkNumElems, values, rowIdx, colIdx, firstColIdxIncl, lastColIdxExcl);

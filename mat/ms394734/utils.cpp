@@ -17,11 +17,14 @@ int calcFirstColIdxIncl(int myRank, int numProcesses, int n) {
 }
 
 int getFirstColIdxIncl(int myRank, int numProcesses, int n, int round, int c, bool inner) {
-    int groupSize = numProcesses/c;
+    int groupSize = numProcesses / c;
     int groupRank = myRank % groupSize;
+    int groupNum = myRank / groupSize;
+    int q = numProcesses / (c * c);
     if (inner)
-        // (+ groupSize) is to avoid negative values in modulo
-        return calcFirstColIdxIncl(((groupRank - round + groupSize) % groupSize), groupSize, n);
+        // + (groupNum * q) is initial shift in InnerABC algorithm
+        // + ((groupNum+1)*groupSize) is to have non-negative value in modulo
+        return calcFirstColIdxIncl(((groupRank - round - (groupNum * q) + ((groupNum+1)*groupSize)) % groupSize), groupSize, n);
     else
         return calcFirstColIdxIncl(((groupRank + round) % groupSize), groupSize, n);
 }
@@ -29,9 +32,12 @@ int getFirstColIdxIncl(int myRank, int numProcesses, int n, int round, int c, bo
 int getLastColIdxExcl(int myRank, int numProcesses, int n, int round, int c, bool inner) {
     int groupSize = numProcesses/c;
     int groupRank = myRank % groupSize;
+    int groupNum = myRank / groupSize;
+    int q = numProcesses / (c * c);
     if (inner)
-        // (+ groupSize) is to avoid negative values in modulo
-        return calcFirstColIdxIncl(((groupRank - round + groupSize) % groupSize) + 1, groupSize, n);
+        // + (groupNum * q) is initial shift in InnerABC algorithm
+        // + ((groupNum+1)*groupSize) is to have non-negative value in modulo
+        return calcFirstColIdxIncl(((groupRank - round - (groupNum * q) + ((groupNum+1)*groupSize)) % groupSize) + 1, groupSize, n);
     else
         return calcFirstColIdxIncl(((groupRank + round) % groupSize) + 1, groupSize, n);
 }
@@ -40,11 +46,18 @@ int getChunkSize(int *cache, int chunkNum) {
     return cache[chunkNum + 2];
 }
 
-int getChunkNumber(int myRank, int numProcesses, int round, int c) {
+int getChunkNumber(int myRank, int numProcesses, int round, int c, bool inner) {
     int groupSize = numProcesses/c;
     assert (round <= groupSize);
-    // (+ groupSize) is to avoid negative values in modulo
-    return ((myRank % groupSize) - round + groupSize) % groupSize;
+    if (inner) {
+        int q = numProcesses / (c * c);
+        int groupSize = numProcesses / c;
+        int groupNum = myRank / groupSize;
+        int groupRank = myRank % groupSize;
+        return (groupRank - round - (q * groupNum) + (2 * groupSize)) % groupSize;
+    } else
+        // (+ groupSize) is to avoid negative values in modulo
+        return ((myRank % groupSize) - round + groupSize) % groupSize;
 }
 
 
@@ -281,6 +294,7 @@ void DenseMatrixFrag::addChunk(DenseMatrixFrag* chunk, bool opt) {
 }
 
 void DenseMatrixFrag::printout() {
+    // TODO See the description of -v in the Input/Output section. Additional instructions: white-spaces are not important (values can be separated by a single space); field formatting is not important; you should use a standard format for floating point numbers (eg. 12345.67890) with at least 5 numbers after the dot.
     std::cout << this->n - this->pad_size << " " << this->n - this->pad_size << std::endl;
     for (int row=0; row<this->n - this->pad_size; row++) {
         for (int col = this->firstColIdxIncl; col<std::min(lastColIdxExcl, this->n - this->pad_size); col++) {

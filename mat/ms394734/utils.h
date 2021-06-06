@@ -6,7 +6,7 @@ int getFirstColIdxIncl(int myRank, int numProcesses, int n, int round=0, int c=1
 int getLastColIdxExcl(int myRank, int numProcesses, int n, int round=0, int c=1, bool inner=false);
 
 int getChunkSize(int *cache, int chunkNum);
-int getChunkNumber(int myRank, int numProcesses, int round=0, int c=1);
+int getChunkNumber(int myRank, int numProcesses, int round=0, int c=1, bool inner=false);
 
 class SparseMatrixFrag {
     public:
