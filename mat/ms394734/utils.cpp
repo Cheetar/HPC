@@ -43,7 +43,7 @@ int getLastColIdxExcl(int myRank, int numProcesses, int n, int round, int c, boo
 }
 
 int getChunkSize(int *cache, int chunkNum) {
-    return cache[chunkNum + 2];
+    return cache[chunkNum + 3];
 }
 
 int getChunkNumber(int myRank, int numProcesses, int round, int c, bool inner) {

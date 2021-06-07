@@ -184,6 +184,7 @@ DenseMatrixFrag* gatherResultColA(int myRank, int numProcesses, DenseMatrixFrag*
 void colA(char* sparse_matrix_file, int seed, int c, int e, bool g, double g_val, bool verbose, int myRank, int numProcesses) {
     int pad_size, chunkNumElems, org_n, n, firstColIdxIncl, lastColIdxExcl, chunkNum, bufSize, numElemsAboveTh;
     int* buf;
+    int* buf_chunk;
 
     SparseMatrixFrag* A;
     SparseMatrixFrag* whole_A;
@@ -232,26 +233,42 @@ void colA(char* sparse_matrix_file, int seed, int c, int e, bool g, double g_val
         chunks = whole_A->chunk(groupSize);
     }
 
+    // Distribute chunks of A over all processes
+    if (myRank == ROOT_PROCESS) {
+        chunkNumElems = whole_A->numElems;
+        int msgLen = 3 * chunkNumElems + (n + 1);
+        int msgPadSize = numProcesses - (msgLen % numProcesses);
+        bufSize = 3 * chunkNumElems + (n + 1) + msgPadSize;
+        assert (bufSize % numProcesses == 0);
+
+        buf = new int[bufSize];
+        memcpy(&buf[0], &(whole_A->values[0]), 2 * sizeof(int) * chunkNumElems);
+        memcpy(&buf[2 * chunkNumElems], &(whole_A->colIdx[0]), sizeof(int) * chunkNumElems);
+        memcpy(&buf[3 * chunkNumElems], &(whole_A->rowIdx[0]), sizeof(int) * (n + 1));
+    }
+
     /* Cache content:
         0 - n
         1 - pad_size
-        [2; groupSize + 2) - number of elements in each chunk
+        2 - bufSize
+        [3; groupSize + 3) - number of elements in each chunk
 
         BTW groupSize is equal to number of chunks
     */
     
-    int *cache = new int[groupSize + 2];
+    int *cache = new int[groupSize + 3];
     if (myRank == ROOT_PROCESS) {
         cache[0] = n;
         cache[1] = pad_size;
+        cache[2] = bufSize;
         for (int i=0; i < groupSize; i++)
-            cache[i + 2] = chunks[i]->numElems;
+            cache[i + 3] = chunks[i]->numElems;
     }
 
     // Broadcast cache
     MPI_Bcast(
         cache,
-        groupSize + 2,
+        groupSize + 3,
         MPI_INT,
         ROOT_PROCESS,
         MPI_COMM_WORLD
@@ -259,13 +276,41 @@ void colA(char* sparse_matrix_file, int seed, int c, int e, bool g, double g_val
 
     n = cache[0];
     pad_size = cache[1];
+    bufSize = cache[2];
 
     assert (n > 0);
     assert (pad_size >= 0);
     assert (numProcesses <= n);
     assert (n % numProcesses == 0);  // Check if we padded the matrix correctly
 
-    // Distribute chunks of A over all processes
+    buf_chunk = new int[bufSize / numProcesses];
+
+    MPI_Scatter(
+        buf,
+        bufSize / numProcesses,
+        MPI_INT,
+        buf_chunk,
+        bufSize / numProcesses,
+        MPI_INT,
+        ROOT_PROCESS,
+        MPI_COMM_WORLD
+    );
+
+    MPI_Gather(
+        buf_chunk,
+        bufSize / numProcesses,
+        MPI_INT,
+        buf,
+        bufSize / numProcesses,
+        MPI_INT,
+        ROOT_PROCESS,
+        MPI_COMM_WORLD
+    );
+
+    if (myRank == ROOT_PROCESS)
+        delete(buf);
+    delete(buf_chunk);
+
     if (myRank == ROOT_PROCESS) {
         std::vector<MPI_Request*> requests;
         std::vector<MPI_Status*> statuses;
