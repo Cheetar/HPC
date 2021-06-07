@@ -151,42 +151,12 @@ SparseMatrixFragByRow* postIterationShiftInnerABC(SparseMatrixFragByRow* A, int*
     return shiftInnerABC(A, cache, myRank, numProcesses, c, 0, numJumps);
 }
 
-void postIterationGatherInnerABC(DenseMatrixFrag* C, int myRank, int numProcesses, int c) {
+DenseMatrixFrag* postIterationGatherInnerABC(DenseMatrixFrag* C, int myRank, int numProcesses, int c) {
     int groupSize = numProcesses/c;
     int groupRank = myRank % groupSize;
-    int myMaster = groupRank;
     int numbersPerChunk = C->numElems;
 
-    MPI_Status status;
-
-    if (myRank == myMaster) {
-        // Receive chunk from each layer
-        DenseMatrixFrag* chunk = new DenseMatrixFrag(C->n, C->pad_size, C->firstColIdxIncl, C->lastColIdxExcl, 0 /*seed*/, false /*dont initialize*/);
-        for (int layer = 1; layer < c; layer++) {
-            MPI_Recv(
-                chunk->data,
-                numbersPerChunk,
-                MPI_DOUBLE,
-                MPI_ANY_SOURCE,
-                TAG,
-                MPI_COMM_WORLD,
-                &status
-            );
-            // Merge chunks
-            C->addChunk(chunk, false /*dont override previous values*/);
-        }
-        delete(chunk);
-    } else {
-        // Send my chunk to my master
-        MPI_Send(
-            C->data,
-            numbersPerChunk,
-            MPI_DOUBLE,
-            myMaster,
-            TAG,
-            MPI_COMM_WORLD
-        );
-    }
+    DenseMatrixFrag* chunk = new DenseMatrixFrag(C->n, C->pad_size, C->firstColIdxIncl, C->lastColIdxExcl, 0 /*seed*/, false /*dont initialize*/);
 
     MPI_Comm commToMaster;
     MPI_Comm_split(
@@ -196,14 +166,17 @@ void postIterationGatherInnerABC(DenseMatrixFrag* C, int myRank, int numProcesse
         &commToMaster
     );
 
-    // Distribute chunks
-    MPI_Bcast(
+    MPI_Allreduce(
         C->data,
+        chunk->data,
         numbersPerChunk,
         MPI_DOUBLE,
-        0,  // Root of this communicator
+        MPI_SUM,
         commToMaster
     );
+
+    delete(C);
+    return chunk;
 }
 
 DenseMatrixFrag* gatherResultInnerABC(int myRank, int numProcesses, int c, DenseMatrixFrag* C) {
@@ -466,7 +439,7 @@ void innerABC(char* sparse_matrix_file, int seed, int c, int e, bool g, double g
         }
 
         A = postIterationShiftInnerABC(A, cache, myRank, numProcesses, c);
-        postIterationGatherInnerABC(C, myRank, numProcesses, c);
+        C = postIterationGatherInnerABC(C, myRank, numProcesses, c);
         delete(B);
         B = C;
     }

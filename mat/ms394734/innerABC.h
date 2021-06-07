@@ -9,7 +9,7 @@ SparseMatrixFragByRow* preShiftInnerABC(SparseMatrixFragByRow* A, int* cache, in
 
 SparseMatrixFragByRow* postIterationShiftInnerABC(SparseMatrixFragByRow* A, int* cache, int myRank, int numProcesses, int c);
 
-void postIterationGatherInnerABC(DenseMatrixFrag* C, int myRank, int numProcesses, int c);
+DenseMatrixFrag* postIterationGatherInnerABC(DenseMatrixFrag* C, int myRank, int numProcesses, int c);
 
 DenseMatrixFrag* gatherResultInnerABC(int myRank, int numProcesses, int c, DenseMatrixFrag* C);
 
