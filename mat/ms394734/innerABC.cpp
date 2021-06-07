@@ -11,6 +11,7 @@
 #include <vector>
 #include <cstdlib>
 #include "utils.h"
+#include <iomanip>
 
 const static int ROOT_PROCESS = 0;
 const static int TAG = 13;
@@ -448,8 +449,11 @@ void innerABC(char* sparse_matrix_file, int seed, int c, int e, bool g, double g
     if (verbose) {
         // Whole matrix C will fit into single node (assumption from FAQ)
         whole_C = gatherResultInnerABC(myRank, numProcesses, c, C);
-        if (myRank == ROOT_PROCESS)
+        if (myRank == ROOT_PROCESS) {
+            // 5 digits after the dot
+            std::cout << std::setprecision(5) << std::fixed;
             whole_C->printout();
+        }
     }
 
     if (g) {
