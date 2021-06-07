@@ -476,7 +476,7 @@ void innerABC(char* sparse_matrix_file, int seed, int c, int e, bool g, double g
                 &totalNumElemsAboveTh,
                 1, // Send one int
                 MPI_INT,
-                MPI_Op MPI_SUM,
+                MPI_SUM,
                 ROOT_PROCESS,
                 commFirstLayer
             );
