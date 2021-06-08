@@ -13,7 +13,6 @@
 #include "utils.h"
 #include "colA.h"
 #include "innerABC.h"
-#include <chrono>
 
 int main(int argc, char * argv[]) {
     int numProcesses, myRank, seed, c, e;
@@ -25,8 +24,6 @@ int main(int argc, char * argv[]) {
 
     static_assert ( sizeof(int) == 4 );
     static_assert ( sizeof(double) == 8 );
-
-    auto start = std::chrono::steady_clock::now();
 
     std::ios_base::sync_with_stdio(false);
 
@@ -82,13 +79,6 @@ int main(int argc, char * argv[]) {
         innerABC(sparse_matrix_file, seed, c, e, g, g_val, verbose, myRank, numProcesses);
     else
         colA(sparse_matrix_file, seed, c, e, g, g_val, verbose, myRank, numProcesses);
-
-
-    auto end = std::chrono::steady_clock::now();
-    if (myRank == 0)
-        std::cout << "Elapsed time in milliseconds: "
-        << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count()
-        << " ms" << std::endl;
 
     return 0;
 }
